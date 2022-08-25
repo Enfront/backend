@@ -149,7 +149,7 @@ class OrderView(APIView, PaginationMixin):
             if seach_query:
                 order = self.check_seach_query(shop_ref, seach_query)
             else:
-                order = Order.objects.filter(shop_id__ref_id=shop_ref).order_by('-created_at')
+                order = Order.objects.filter(shop_id__ref_id=shop_ref).exclude(email=None).order_by('-created_at')
 
             if not order:
                 raise CustomException(
