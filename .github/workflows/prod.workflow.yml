@@ -1,0 +1,36 @@
+name: Build and publish Enfront backend to live server
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  build_and_deploy_backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v2
+
+      - name: Build image
+        run: docker build --target prod -t enfront-backend .
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Log in to Digital Ocean Container Registry
+        run: doctl registry login --expiry-seconds 600
+
+      - name: Tag image latest
+        run: docker tag enfront-backend registry.digitalocean.com/enfront/enfront-backend:latest
+
+      - name: Tag image with GitHub SHA
+        run: docker tag enfront-backend registry.digitalocean.com/enfront/enfront-backend:${{ github.sha }}
+
+      - name: Push image to Digital Ocean Container Registry
+        run: docker push registry.digitalocean.com/enfront/enfront-backend --all-tags

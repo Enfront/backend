@@ -1,0 +1,30 @@
+<script src="https://www.recaptcha.net/recaptcha/api.js?render=6LfyKAEeAAAAALsY50FzMgCWwmu27rg3B4yl-Vet"></script>
+
+<script>
+  class Enfront {
+    constructor() {
+      this.addRecaptchaTokenToForm();
+     }
+
+    getToken = (t, e) => {
+      grecaptcha.execute('6LfyKAEeAAAAALsY50FzMgCWwmu27rg3B4yl-Vet', {
+        action: e
+      }).then((function(e) {
+          var n = t.querySelector("input[name=recaptcha]");
+          n instanceof HTMLElement ? n.setAttribute("value", e) : ((n = document.createElement("input")).setAttribute("name", "recaptcha"), n.setAttribute("type", "hidden"), n.setAttribute("value", e), t.appendChild(n, t)), t.submit()
+      }))
+    }
+
+    addRecaptchaTokenToForm = () => {
+      window.addEventListener("DOMContentLoaded", function() {
+        const t = document.querySelectorAll(['form[action*="/contact"] input[name="form_type"][value="contact"]', 'form[action*="/blogs"] input[name="form_type"][value="new_comment"]', 'form[action*="/login"] input[name="form_type"][value="customer_login"]', 'form[action*="/account"] input[name="form_type"][value="recover_customer_password"]', 'form[action*="/account"] input[name="form_type"][value="create_customer"]', 'form[action*="/contact"] input[name="form_type"][value="customer"]'].join(", "));
+        for (var e = 0; e < t.length; e++) {
+            var n = t[e].form, a = t[e].getAttribute("value");
+            n.setAttribute("onsubmit", 'enfront.getToken(this, "' + a + '"); return false;')
+        }
+      });
+    }
+  }
+
+  const enfront = new Enfront();
+</script>

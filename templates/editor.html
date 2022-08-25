@@ -1,0 +1,33 @@
+<script>
+  window.addEventListener("message", function(t) {
+    let a = document.querySelector(`[data-${t.data.attribute}='${t.data.id}']`);
+
+    switch (t.data.attribute) {
+      case "text":
+        a.textContent = t.data.value;
+        break;
+
+      case "background-color":
+          a.style.backgroundColor = t.data.value;
+          break;
+
+      case "product":
+        a.textContent = t.data.value.name,
+        document.querySelector(`[data-${t.data.attribute}-media='${t.data.id}']`).src = `https://jkpay.s3.us-east-2.amazonaws.com${t.data.value.images[0].path}`,
+        document.querySelector(`[data-${t.data.attribute}-price='${t.data.id}']`).textContent = t.data.value.price;
+        break;
+
+      case "display":
+        if (!1 === t.data.value) {
+          a.style.display = "none";
+          break
+        }
+
+        a.style.display = "initial";
+        break;
+
+      default:
+        console.log("Data attribute not set correctly.")
+    }
+  }, false);
+</script>

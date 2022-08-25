@@ -1,0 +1,17 @@
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+
+
+class AccountActivationTokenGenerator(PasswordResetTokenGenerator):
+    def _make_hash_value(self, user, timestamp):
+        return str(user.email) + str(timestamp) + str(user.is_active)
+
+
+account_activation_token = AccountActivationTokenGenerator()
+
+
+class ForgotPasswordTokenGenerator(PasswordResetTokenGenerator):
+    def _make_hash_value(self, user, timestamp):
+        return str(user.email) + str(timestamp) + str(user.updated_at)
+
+
+forgot_password_token = ForgotPasswordTokenGenerator()
