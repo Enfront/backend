@@ -283,17 +283,15 @@ class PaymentsPayPalView(PayPalClient, APIView):
 
         serialized_data.create(serialized_data.data, order=order)
 
-    def save_webhook(self, webhook_data, order, authorization=False):
+    def save_webhook(self, webhook_data, order):
         match webhook_data['status']:
             case 'VOIDED':
                 paypal_status = -1
-            case 'COMPLETED' if authorization:
-                paypal_status = 1
             case 'CREATED':
                 paypal_status = 1
             case 'SAVED | APPROVED | PAYER_ACTION_REQUIRED':
                 paypal_status = 2
-            case 'COMPLETED' if not authorization:
+            case 'COMPLETED':
                 paypal_status = 3
             case _:
                 paypal_status = 0
@@ -342,7 +340,7 @@ class PaymentsPayPalView(PayPalClient, APIView):
         authorize_request.prefer('return=representation')
         authorize_response = self.client.execute(authorize_request)
         response_json = self.object_to_json(authorize_response.result)
-        self.save_webhook(response_json, order, True)
+        self.save_payment_session(response_json, order)
 
         is_banned = check_banned_email(authorize_response.result.payer.email_address, order.shop)
         if is_banned:
