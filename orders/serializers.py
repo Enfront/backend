@@ -17,7 +17,7 @@ from users.serializers import PublicUserInfoSerializer
 from shared.exceptions import CustomException
 from carts.views import delete_cart_item
 from customers.models import Customer
-from payments.models import Payment
+from payments.models import PaymentSession
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -288,14 +288,15 @@ class PublicOrderOwnerSerializer(PublicOrderCheckoutSerializer):
 
     def get_paypal_email(self, request):
         try:
-            payment = Payment.objects.get(order_id=request.id, status=1)
-        except Payment.DoesNotExist:
+            payment_session = PaymentSession.objects.get(order_id=request.id, status=2)
+            print(request.id)
+        except PaymentSession.DoesNotExist:
             return None
 
-        if payment.provider != 0:
+        if payment_session.provider != 0:
             return None
 
-        return payment.provider_data['payer']['email_address']
+        return payment_session.provider_data['payer']['email_address']
 
     class Meta:
         model = Order
