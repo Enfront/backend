@@ -82,8 +82,11 @@ def get_total_fees(shop_ref):
     total_fees = decimal.Decimal(0.0)
     for order in orders:
         if order.current_status >= 1:
-            payment = Payment.objects.get(order=order, status=3)
-            total_fees += payment.fee
+            try:
+                payment = Payment.objects.get(order=order, status=3)
+                total_fees += payment.fee
+            except Payment.DoesNotExist:
+                continue
 
     return total_fees
 
