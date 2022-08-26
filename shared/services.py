@@ -51,22 +51,22 @@ def get_subscription(user_pk=None, user_ref=None, shop_ref=None):
         subscription['tier'] = 3
         subscription['max_products'] = 99999
         subscription['max_shops'] = 99999
-        subscription['fee'] = decimal.Decimal(0.00)
+        subscription['fee'] = decimal.Decimal(0.005)
     elif subscription_tier == 2:
         subscription['tier'] = 2
         subscription['max_shops'] = 5
         subscription['max_products'] = 99999
-        subscription['fee'] = decimal.Decimal(0.005)
+        subscription['fee'] = decimal.Decimal(0.01)
     elif subscription_tier == 1:
         subscription['tier'] = 1
         subscription['max_shops'] = 3
         subscription['max_products'] = 99999
-        subscription['fee'] = decimal.Decimal(0.01)
+        subscription['fee'] = decimal.Decimal(0.02)
     else:
         subscription['tier'] = 0
         subscription['max_shops'] = 1
         subscription['max_products'] = 99999
-        subscription['fee'] = decimal.Decimal(0.02)
+        subscription['fee'] = decimal.Decimal(0.03)
 
     return subscription
 
