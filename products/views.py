@@ -117,7 +117,7 @@ class ProductView(APIView):
 
         if shop_ref is not None:
             try:
-                products = Product.objects.filter(shop__ref_id=shop_ref).exclude(status=-1)
+                products = Product.objects.filter(shop__ref_id=shop_ref).exclude(status=-1).order_by('name')
                 is_many = True
             except Product.DoesNotExist:
                 raise CustomException(
