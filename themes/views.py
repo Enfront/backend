@@ -2,6 +2,7 @@ from django.conf import settings
 from django.utils.text import slugify
 from django.middleware.csrf import get_token
 from django.http import HttpResponse, HttpResponseRedirect
+from django.db.models import Q
 
 from rest_framework import status
 from rest_framework.views import APIView
@@ -52,7 +53,7 @@ class ThemeView(APIView):
 
             return Response(data, status=status.HTTP_200_OK)
 
-        themes = Theme.objects.all()
+        themes = Theme.objects.filter(Q(status=1) | (Q(status=0) & Q(developer=request.user.pk)))
         themes_data = PublicThemeSerializer(themes, many=True).data
 
         data = {
