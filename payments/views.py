@@ -81,13 +81,13 @@ def send_virtual_product_email(email_address, order):
         order_item.save()
 
         product_data = PublicProductSerializer(order_item.product).data
+        print(product_data)
         product = {
             'name': product_data.get('name'),
             'key': keys,
-            'price': order_item.price,
+            'price': order_item.price / 100,
             'quantity': order_item.quantity,
-            # 'main_image': product_data.get('images')[0].path if product_data.get('images') else '',
-            'main_image': '',
+            'main_image': product_data.get('images')[0]['path'] if product_data.get('images') else '',
         }
 
         order_items_detailed.append(product)
@@ -105,7 +105,7 @@ def send_virtual_product_email(email_address, order):
         'full_name': full_name,
         'order_id': order.ref_id,
         'order_items': order_items_detailed,
-        'order_total': total,
+        'order_total': total / 100,
         'currency': order.currency,
         'shop_name': order.shop.name
     }
