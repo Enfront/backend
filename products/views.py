@@ -69,7 +69,7 @@ class ProductView(APIView):
         delimiter = detect(
             keys,
             default='\n',
-            whitelist=[',', ';', ':', '|', '\t', '\n', ' ']
+            whitelist=[',', '\n', ' ']
         )
 
         if delimiter is None:
