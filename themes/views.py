@@ -17,6 +17,7 @@ import boto3
 import botocore
 import json
 import uuid
+import html
 
 from .models import Theme, ThemeConfiguration
 from .serializers import PublicThemeSerializer, ThemeConfigurationSerializer
@@ -164,7 +165,7 @@ class ThemeConfigurationView(APIView):
 
         if config_data.get('config') is not None:
             s3 = boto3.resource('s3')
-            s3.Bucket('jkpay').put_object(Key=save_path, Body=config_data.get('config'))
+            s3.Bucket('jkpay').put_object(Key=save_path, Body=html.escape(config_data.get('config'), quote=False))
 
         data = {
             'success': True,
