@@ -605,7 +605,7 @@ class PaymentsStripeIpnView(APIView):
         serialized_data.create(serialized_data.data)
 
     def post(self, request):
-        webhook_secret = os.environ['STRIPE_WEBHOOK']
+        webhook_secret = os.environ['STRIPE_PAYMENT_WEBHOOK__CONNECT']
 
         if webhook_secret:
             signature = request.META.get('HTTP_STRIPE_SIGNATURE')
@@ -865,7 +865,7 @@ class PaymentsProviderStripeIpn(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        webhook_secret = os.environ['STRIPE_WEBHOOK']
+        webhook_secret = os.environ['STRIPE_ACCOUNT_WEBHOOK__CONNECT']
 
         if not webhook_secret:
             data = {

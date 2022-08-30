@@ -306,7 +306,7 @@ class SubscriptionStripeIpnView(APIView):
         return user
 
     def post(self, request):
-        webhook_secret = os.environ['STRIPE_WEBHOOK']
+        webhook_secret = os.environ['STRIPE_SUBSCRIPTION_WEBHOOK']
 
         if webhook_secret:
             signature = request.META.get('HTTP_STRIPE_SIGNATURE')
