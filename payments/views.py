@@ -40,7 +40,7 @@ from orders.serializers import (
 
 from blacklists.models import Blacklist
 from shops.models import Shop
-from shared.services import send_mailgun_email, get_subscription
+from shared.services import send_mailgun_email, get_subscription, get_url
 from shared.exceptions import CustomException
 from products.views import change_stock
 from products.models import DigitalProduct
@@ -822,8 +822,8 @@ class PaymentsProviderStripeView(APIView):
 
         account_link = stripe.AccountLink.create(
             account=stripe_account_id,
-            refresh_url=os.environ['STRIPE_REFRESH_URL'],
-            return_url=os.environ['STRIPE_RETURN_URL'],
+            refresh_url=get_url('/dashboard/settings'),
+            return_url=get_url('/dashboard/settings'),
             type="account_onboarding",
         )
 
