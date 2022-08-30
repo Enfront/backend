@@ -299,16 +299,25 @@ class ThemeTemplateView(APIView):
 
     def get_customer(self, user, user_cookie):
         if user.is_authenticated:
-            user_object = Customer.objects.get(user__ref_id=user.ref_id)
-            user_data = PublicCustomerInfoSerializer(user_object).data
+            try:
+                user_object = Customer.objects.get(user__ref_id=user.ref_id)
+                user_data = PublicCustomerInfoSerializer(user_object).data
 
-            user = {
-                'id': user_data['user']['ref_id'],
-                'username': user_data['user']['username'],
-                'email': user_data['user']['email'],
-                'first_name': user_data['user']['first_name'],
-                'last_name': user_data['user']['last_name'],
-            }
+                user = {
+                    'id': user_data['user']['ref_id'],
+                    'username': user_data['user']['username'],
+                    'email': user_data['user']['email'],
+                    'first_name': user_data['user']['first_name'],
+                    'last_name': user_data['user']['last_name'],
+                }
+            except Customer.DoesNotExist:
+                user = {
+                    'id': uuid4() if user_cookie is None else user_cookie,
+                    'username': None,
+                    'email': None,
+                    'first_name': None,
+                    'last_name': None,
+                }
         else:
             user = {
                 'id': uuid4() if user_cookie is None else user_cookie,
@@ -349,7 +358,7 @@ class ThemeTemplateView(APIView):
 
     def get_reset_password_data(self, request):
         reset_data = {
-            'ue': request.query_params.get('ue'),
+            'ref_id': request.query_params.get('ref_id'),
             'token': request.query_params.get('token')
         }
 
