@@ -258,19 +258,19 @@ class ResetPasswordView(APIView):
         shop_name = reset_data.get('shop_name')
 
         try:
-            user_info = User.objects.get(user_ref=user_ref)
+            user_info = User.objects.get(ref_id=user_ref)
         except User.DoesNotExist:
             if reset_data.get('shop') is None:
                 create_form_errors(
                     'form',
-                    'A user with the ref id ' + user_ref + ' does not exist.',
+                    'A user with the ref id ' + str(user_ref) + ' does not exist.',
                     status.HTTP_404_NOT_FOUND
                 )
 
                 return HttpResponseRedirect(get_url('/forgot', shop_name))
 
             raise CustomException(
-                'A user with the ref id ' + user_ref + ' does not exist.',
+                'A user with the ref id ' + str(user_ref) + ' does not exist.',
                 status.HTTP_404_NOT_FOUND
             )
 
