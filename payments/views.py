@@ -822,8 +822,8 @@ class PaymentsProviderStripeView(APIView):
 
         account_link = stripe.AccountLink.create(
             account=stripe_account_id,
-            refresh_url="http://localhost/dashboard/settings",
-            return_url="http://localhost/dashboard/settings",
+            refresh_url=os.environ['STRIPE_REFRESH_URL'],
+            return_url=os.environ['STRIPE_RETURN_URL'],
             type="account_onboarding",
         )
 
