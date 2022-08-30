@@ -13,7 +13,7 @@ class CustomAuthentication(BaseBackend):
                 shop = Shop.objects.get(name=shop_name)
                 user = User.objects.get(email=email, customer__shop=shop)
             else:
-                user = User.objects.get(email=email)
+                user = User.objects.get(email=email, customer=None)
 
         except User.DoesNotExist:
             return None
