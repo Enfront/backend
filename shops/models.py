@@ -25,6 +25,7 @@ class Shop(models.Model):
     owner = models.ForeignKey(User, on_delete=models.SET(INACTIVE), blank=True)
     domain = models.URLField(unique=True, blank=True)
     country = models.ForeignKey(Country, on_delete=models.CASCADE)
+    description = models.TextField(default='We sell...')
     ref_id = models.UUIDField(default=uuid4, editable=False, unique=True)
 
     class Meta:
