@@ -165,7 +165,7 @@ class ForgotPasswordView(APIView):
             + (slugify(shop_name) + '.' if shop_name is not None else '')
             + os.environ['SITE_URL']
             + '/reset?ref_id='
-            + user.ref_id
+            + str(user.ref_id)
             + '&token='
             + token
         )
