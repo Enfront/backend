@@ -18,10 +18,8 @@ CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = ['http://localhost']
 CSRF_COOKIE_SAMESITE = 'Lax'
-CSRF_COOKIE_DOMAIN = 'localhost'
 
 SESSION_COOKIE_SAMESITE = 'Lax'
-SESSION_COOKIE_DOMAIN = 'localhost'
 
 CSP_FRAME_ANCESTORS = ['http://localhost']
 CSP_DEFAULT_SRC = ["'self'", 'https://www.recaptcha.net']
