@@ -15,17 +15,9 @@ from paypalcheckoutsdk.payments import AuthorizationsCaptureRequest, Authorizati
 from paypalcheckoutsdk.orders import OrdersCreateRequest, OrdersCaptureRequest, OrdersAuthorizeRequest
 from uuid import uuid4
 
-import decimal
-import hashlib
-import hmac
-import json
-import math
 import sys
 import os
 import stripe
-import urllib.error
-import urllib.parse
-import urllib.request
 
 from .models import PaymentProvider
 from .serializers import PaymentSerializer, PaymentSessionSerializer
@@ -40,7 +32,7 @@ from orders.serializers import (
 
 from blacklists.models import Blacklist
 from shops.models import Shop
-from shared.services import send_mailgun_email, get_subscription, get_url
+from shared.services import send_mailgun_email, get_order_fees, get_url
 from shared.exceptions import CustomException
 from products.views import change_stock
 from products.models import DigitalProduct
@@ -534,13 +526,10 @@ class PaymentsStripeView(APIView):
 
             return Response(data, status.HTTP_403_FORBIDDEN)
 
-        shop_subscription = get_subscription(shop_ref=order_data.get('shop_ref'))
-        subscription_fee = math.ceil((order_serialized_data.get('total') * shop_subscription['fee']))
-
         intent = stripe.PaymentIntent.create(
             amount=order_serialized_data.get('total'),
             currency=order_serialized_data.get('currency'),
-            application_fee_amount=subscription_fee,
+            application_fee_amount=get_order_fees(order_serialized_data.get('total'), order_data.get('shop_ref'), 1),
             stripe_account=stripe_account.provider_data['id'],
             automatic_payment_methods={
                 'enabled': True,

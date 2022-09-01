@@ -91,6 +91,28 @@ def get_total_fees(shop_ref):
     return total_fees
 
 
+def get_order_fees(order_total, shop_ref, provider):
+    try:
+        shop = Shop.objects.get(ref_id=shop_ref)
+    except Shop.DoesNotExist:
+        raise CustomException(
+            'A shop with id ' + str(shop_ref) + ' does not exist.',
+            status.HTTP_404_NOT_FOUND
+        )
+
+    # Take 0% fees for PayPal
+    if provider == 0:
+        return 0
+
+    # In line with Brazilian regulatory and compliance requirements, platforms based outside of
+    # Brazil, with Brazilian connected accounts cannot collect application fees through Stripe.
+    if provider == 1 and shop.country.num_code == 76:
+        return 0
+
+    fee_percentage = get_subscription(shop_ref=shop_ref)
+    return math.ceil(order_total * fee_percentage['fee'])
+
+
 def get_url(path, subpath=''):
     if subpath != '':
         return os.environ['SITE_SCHEME'] + slugify(subpath) + '.' + os.environ['SITE_URL'] + path

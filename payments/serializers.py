@@ -8,7 +8,7 @@ import math
 from .models import Payment, PaymentSession, PaymentProvider
 
 from orders.models import Order
-from shared.services import get_subscription
+from shared.services import get_order_fees
 from shared.exceptions import CustomException
 
 
@@ -24,12 +24,7 @@ class PaymentSerializer(serializers.ModelSerializer):
                 status.HTTP_404_NOT_FOUND
             )
 
-        # Take 0% fees for PayPal
-        if request['provider'] == 0:
-            return decimal.Decimal(0.00)
-
-        subscription = get_subscription(shop_ref=order.shop.ref_id)
-        return math.ceil(order.total * subscription['fee'])
+        return get_order_fees(order.total, order.shop.ref_id, request['provider'])
 
     def create(self, validated_data):
         validated_data['order'] = self.context['order']
