@@ -34,6 +34,10 @@ class RegisterUserSerializer(serializers.ModelSerializer):
         shop = None
         anonymous_user = None
 
+        # Failed password validation
+        if not validated_data['password']:
+            return
+
         if shop_name is not None:
             shop = Shop.objects.get(name=shop_name)
 
