@@ -695,6 +695,12 @@ class PaymentsProviderPayPalView(APIView):
                 status.HTTP_204_NO_CONTENT,
             )
 
+        if paypal_details.provider_data['email'] == '':
+            raise CustomException(
+                'A PayPal account for shop with id ' + str(shop_ref) + ' was not found.',
+                status.HTTP_204_NO_CONTENT,
+            )
+
         data = {
             'success': True,
             'message': 'PayPal for shop ' + str(shop_ref) + ' successfully retrieved.',
@@ -728,7 +734,7 @@ class PaymentsProviderPayPalView(APIView):
 
             defaults={
                 'shop_id': shop.id,
-                'status': 1,
+                'status': 1 if paypal_data.get('email') != '' else -1,
                 'provider_data': {
                     'email': paypal_data.get('email')
                 },
