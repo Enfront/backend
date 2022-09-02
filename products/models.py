@@ -37,6 +37,8 @@ class Product(TimestampedModel):
     shop = models.ForeignKey(Shop, on_delete=models.CASCADE)
     ref_id = models.UUIDField(default=uuid4, editable=False, unique=True)
     price = models.BigIntegerField(validators=[MinValueValidator(49), MaxValueValidator(1000000)])
+    min_order_quantity = models.PositiveIntegerField(default=1)
+    max_order_quantity = models.PositiveIntegerField(default=2147483647)
 
     class Meta:
         db_table = 'product'

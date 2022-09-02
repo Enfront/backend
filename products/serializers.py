@@ -35,6 +35,8 @@ class ProductSerializer(serializers.ModelSerializer):
         instance.slug = self.get_slug(validated_data.get('name'))
         instance.shop = self.get_shop(validated_data.get('shop'))
         instance.price = validated_data.get('price')
+        instance.min_order_quantity = validated_data.get('min_order_quantity')
+        instance.max_order_quantity = validated_data.get('max_order_quantity')
         instance.save()
 
         return instance
@@ -72,7 +74,8 @@ class PublicProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ['name', 'description', 'price', 'slug', 'images', 'available', 'ref_id']
+        fields = ['name', 'description', 'price', 'slug', 'images', 'available', 'min_order_quantity',
+                  'max_order_quantity', 'ref_id']
 
 
 class PublicProductOwnerSerializer(serializers.ModelSerializer):
@@ -93,7 +96,8 @@ class PublicProductOwnerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ['name', 'description', 'stock', 'status', 'slug', 'ref_id', 'price', 'images', 'keys']
+        fields = ['name', 'description', 'stock', 'status', 'slug', 'ref_id', 'price', 'images', 'keys',
+                  'min_order_quantity', 'max_order_quantity']
 
 
 class PublicProductCartSerializer(PublicProductSerializer):
@@ -108,4 +112,5 @@ class PublicProductCartSerializer(PublicProductSerializer):
 
     class Meta:
         model = Product
-        fields = ['name', 'price', 'quantity', 'stock', 'slug', 'images', 'ref_id', 'cart_ref_id']
+        fields = ['name', 'price', 'quantity', 'stock', 'slug', 'images', 'ref_id', 'cart_ref_id', 'min_order_quantity',
+                  'max_order_quantity']

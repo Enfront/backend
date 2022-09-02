@@ -16,8 +16,9 @@ import os
 from .models import Cart, CartItem
 from .serializers import CartItemSerializer
 
+from shared.exceptions import CustomException
 from shared.services import get_url
-from products.serializers import PublicProductCartSerializer, ProductSerializer
+from products.serializers import PublicProductCartSerializer
 from products.models import Product
 from shops.models import Shop
 
@@ -132,18 +133,9 @@ class CartAddItemView(APIView):
             cart = self.create_cart(request.get_host(), user_cookie)
             new_cart = True
 
-        try:
-            product = Product.objects.get(ref_id=cart_data.get('product'))
-            product_data = ProductSerializer(instance=product).data
-        except Product.DoesNotExist:
-            raise CustomException(
-                'Product with id ' + str(cart_data.get('product')) + ' could not be found.',
-                status.HTTP_404_NOT_FOUND
-            )
-
         cart_item_details = {
-            'product': product_data['id'],
-            'cart': cart.id,
+            'product': cart_data.get('product'),
+            'cart': cart.ref_id,
         }
 
         context = {'request': request}
@@ -156,10 +148,11 @@ class CartAddItemView(APIView):
                 status.HTTP_400_BAD_REQUEST
             )
 
-        serialized_data.create(serialized_data.data, cart=cart, product=product)
+        serialized_data.create(serialized_data.data)
+
         response = HttpResponseRedirect(get_url('/cart', slugify(cart_data.get('shop'))))
 
-        # Create cart cookie since there is not one already
+        # create cart cookie since there is not one already
         if new_cart:
             response.set_cookie('_enfront_cid', cart.ref_id, 604800)
 
@@ -195,7 +188,7 @@ class CartRemoveItemView(APIView):
                 cart_item.quantity = cart_item.quantity - 1
                 cart_item.save()
             else:
-                # Don't actually delete; just change expiration date and quantity to 0
+                # don't actually delete; just change expiration date and quantity to 0
                 cart_item.quantity = 0
                 cart_item.expires_at = timezone.now()
                 cart_item.save()

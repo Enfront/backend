@@ -191,6 +191,14 @@ class OrderView(APIView, PaginationMixin):
 
         cart_items = get_users_cart_items(cart)
 
+        # check if item quantities are in the specified bounds
+        for item in cart_items:
+            if item['quantity'] < item['min_order_quantity'] or item['quantity'] > item['max_order_quantity']:
+                raise CustomException(
+                    'Quantity must be between ' + item['min_order_quantity'] + ' and ' + item['max_order_quantity'],
+                    status.HTTP_400_BAD_REQUEST
+                )
+
         context = {
             'request': request,
             'user_ref': user_cookie,
