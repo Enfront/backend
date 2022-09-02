@@ -216,19 +216,23 @@ class ForgotPasswordView(APIView):
             return Response(data, status.HTTP_401_UNAUTHORIZED)
 
         try:
-            user_info = User.objects.get(email=forgot_data.get('email'))
+            if forgot_data.get('shop') is None:
+                shop = Shop.objects.get(name=forgot_data.get('shop_name'))
+                user_info = User.objects.get(email=forgot_data.get('email'), customer__shop=shop)
+            else:
+                user_info = User.objects.get(email=forgot_data.get('email'), customer=None)
         except User.DoesNotExist:
             if forgot_data.get('shop') is None:
                 create_form_errors(
                     'form',
-                    'A user with email ' + forgot_data.get('email') + ' does not exist.',
+                    'A user with the email ' + forgot_data.get('email') + ' does not exist.',
                     status.HTTP_404_NOT_FOUND
                 )
 
                 return HttpResponseRedirect(get_url('/forgot', forgot_data.get('shop_name')))
 
             raise CustomException(
-                'A user with email ' + forgot_data.get('email') + ' does not exist.',
+                'A user with the email ' + forgot_data.get('email') + ' does not exist.',
                 status.HTTP_404_NOT_FOUND
             )
 
