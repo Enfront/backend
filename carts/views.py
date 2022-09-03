@@ -184,7 +184,7 @@ class CartRemoveItemView(APIView):
                 expires_at__gt=timezone.now()
             )
 
-            if cart_item.quantity > 1:
+            if cart_item.quantity > 1 and cart_item.quantity - 1 > product.min_order_quantity:
                 cart_item.quantity = cart_item.quantity - 1
                 cart_item.save()
             else:
