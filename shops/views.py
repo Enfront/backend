@@ -130,7 +130,7 @@ class ShopView(APIView):
 
         try:
             shop = Shop.objects.get(ref_id=ref_id)
-            if shop_data.get('status') == '1' and shop_data.get('status') != shop.status:
+            if int(shop_data.get('status')) == 1 and int(shop_data.get('status')) != shop.status:
                 self.check_subscription_limits(shop.owner.pk, True)
 
             shop.name = shop_data.get('name')
