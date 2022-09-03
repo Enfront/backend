@@ -32,7 +32,7 @@ def change_stock(product, quantity, operation):
                 status.HTTP_409_CONFLICT
             )
 
-        if product.stock == quantity:
+        if (product.stock - quantity) == 0 or (product.stock - quantity) < product.min_order_quantity:
             product.status = -2
             product.save()
 
