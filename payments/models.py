@@ -1,5 +1,6 @@
 from django.db import models
 
+from picklefield.fields import PickledObjectField
 from uuid import uuid4
 
 from shared.models import TimestampedModel
@@ -10,10 +11,12 @@ from shops.models import Shop
 class Payment(TimestampedModel):
     PAYPAL = 0
     STRIPE = 1
+    CRYPTO = 2
 
     PROVIDER_CHOICES = (
         (PAYPAL, 'paypal'),
         (STRIPE, 'stripe'),
+        (CRYPTO, 'crypto'),
     )
 
     REFUNDED = -3
@@ -51,10 +54,12 @@ class Payment(TimestampedModel):
 class PaymentSession(TimestampedModel):
     PAYPAL = 0
     STRIPE = 1
+    CRYPTO = 2
 
     PROVIDER_CHOICES = (
         (PAYPAL, 'paypal'),
         (STRIPE, 'stripe'),
+        (CRYPTO, 'crypto'),
     )
 
     ERROR = -2
@@ -84,10 +89,12 @@ class PaymentSession(TimestampedModel):
 class PaymentProvider(TimestampedModel):
     PAYPAL = 0
     STRIPE = 1
+    CRYPTO = 2
 
     PROVIDER_CHOICES = (
         (PAYPAL, 'paypal'),
         (STRIPE, 'stripe'),
+        (CRYPTO, 'crypto'),
     )
 
     INACTIVE = -1
@@ -105,3 +112,10 @@ class PaymentProvider(TimestampedModel):
 
     class Meta:
         db_table = 'payment_provider'
+
+
+class PaymentCrypto(models.Model):
+    btcpay_data = PickledObjectField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'payment_crypto'

@@ -4,7 +4,6 @@ from django.utils.http import urlencode
 from django.forms.models import model_to_dict
 from django.template.loader import render_to_string
 from django.core.exceptions import ValidationError
-
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -19,8 +18,8 @@ import sys
 import os
 import stripe
 
-from .models import PaymentProvider
-from .serializers import PaymentSerializer, PaymentSessionSerializer
+from .models import PaymentProvider, PaymentCrypto
+from .serializers import PaymentSerializer, PaymentSessionSerializer, PublicPaymentProviderSerializer
 
 from orders.models import Order
 from orders.serializers import (
@@ -578,7 +577,7 @@ class PaymentsStripeIpnView(APIView):
             'captured_at': timezone.now(),
             'provider_data': webhook_data,
             'status': stripe_status,
-            'ref_id':  uuid4(),
+            'ref_id': uuid4(),
         }
 
         context = {'order': order}
@@ -658,147 +657,22 @@ class PaymentsStripeIpnView(APIView):
             return Response(data, status.HTTP_200_OK)
 
 
-class PaymentsProviderPayPalView(APIView):
-    permission_classes = [AllowAny]
+class PaymentsProviderView(APIView):
+    serializer_class = PublicPaymentProviderSerializer
 
-    def get(self, request, shop_ref):
-        if shop_ref is None:
-            raise CustomException(
-                'An shop id must be provided.',
-                status.HTTP_422_UNPROCESSABLE_ENTITY
-            )
-
-        try:
-            shop = Shop.objects.get(ref_id=shop_ref)
-        except Shop.DoesNotExist:
-            raise CustomException(
-                'A shop with ref id ' + str(shop_ref) + ' was not found.',
-                status.HTTP_404_NOT_FOUND
-            )
-
-        try:
-            paypal_details = PaymentProvider.objects.exclude(status=-1).get(shop=shop, provider=0)
-        except PaymentProvider.DoesNotExist:
-            raise CustomException(
-                'A PayPal account for shop with id ' + str(shop_ref) + ' was not found.',
-                status.HTTP_204_NO_CONTENT,
-            )
-
-        if paypal_details.provider_data['email'] == '':
-            raise CustomException(
-                'A PayPal account for shop with id ' + str(shop_ref) + ' was not found.',
-                status.HTTP_204_NO_CONTENT,
-            )
-
-        data = {
-            'success': True,
-            'message': 'PayPal for shop ' + str(shop_ref) + ' successfully retrieved.',
-            'data': {
-                'email': paypal_details.provider_data['email'],
-            },
-        }
-
-        return Response(data, status=status.HTTP_200_OK)
-
-    def post(self, request, shop_ref):
-        paypal_data = request.data
-
-        if shop_ref is None:
-            raise CustomException(
-                'An shop id must be provided.',
-                status.HTTP_422_UNPROCESSABLE_ENTITY
-            )
-
-        try:
-            shop = Shop.objects.get(ref_id=shop_ref)
-        except Shop.DoesNotExist:
-            raise CustomException(
-                'A shop with ref id ' + str(shop_ref) + ' was not found.',
-                status.HTTP_404_NOT_FOUND
-            )
-
-        PaymentProvider.objects.update_or_create(
-            shop_id=shop.id,
-            provider=0,
-
-            defaults={
-                'shop_id': shop.id,
-                'status': 1 if paypal_data.get('email') != '' else -1,
-                'provider_data': {
-                    'email': paypal_data.get('email')
-                },
-            }
-        )
-
-        data = {
-            'success': True,
-            'message': 'PayPal account successfully saved.',
-            'data': {},
-        }
-
-        return Response(data, status=status.HTTP_200_OK)
-
-
-class PaymentsProviderStripeView(APIView):
-    permission_classes = [AllowAny]
-
-    def get(self, request, shop_ref):
-        if shop_ref is None:
-            raise CustomException(
-                'A shop id must be provided',
-                status.HTTP_422_UNPROCESSABLE_ENTITY
-            )
-
-        try:
-            stripe_acc = PaymentProvider.objects.get(shop__ref_id=shop_ref, provider=1, status=1)
-        except PaymentProvider.DoesNotExist:
-            raise CustomException(
-                'A Stripe account was not found.',
-                status.HTTP_204_NO_CONTENT
-            )
-
-        if not stripe_acc.provider_data['details_submitted'] or not \
-                stripe_acc.provider_data['charges_enabled']:
-            raise CustomException(
-                'A Stripe account was found but the onboarding step was not complete.',
-                status.HTTP_403_FORBIDDEN
-            )
-
-        data = {
-            'success': True,
-            'message': 'A Stripe account was found and onboarded.',
-            'data': {
-                'id': stripe_acc.provider_data['id']
-            },
-        }
-
-        return Response(data, status=status.HTTP_200_OK)
-
-    def post(self, request, shop_ref):
-        if shop_ref is None:
-            raise CustomException(
-                'An shop id must be provided.',
-                status.HTTP_422_UNPROCESSABLE_ENTITY
-            )
-
-        try:
-            shop = Shop.objects.get(ref_id=shop_ref)
-        except Shop.DoesNotExist:
-            raise CustomException(
-                'A shop with ref id ' + str(shop_ref) + ' was not found.',
-                status.HTTP_404_NOT_FOUND
-            )
-
-        onboarded_data = PaymentProvider.objects.filter(shop=shop.id, provider=1, status=1).first()
+    def start_stripe_onboarding(self, shop):
+        onboarded_data = PaymentProvider.objects.get(shop=shop.id, provider=1)
 
         if onboarded_data:
             stripe_account_id = onboarded_data.provider_data['id']
+            onboarded_data.status = 1
+            onboarded_data.save()
         else:
             stripe_account = stripe.Account.create(
                 type='standard',
                 country=shop.country.iso_2,
                 metadata={
-                    'shop_ref': shop_ref
+                    'shop_ref': shop.ref_id
                 }
             )
 
@@ -822,15 +696,9 @@ class PaymentsProviderStripeView(APIView):
             type="account_onboarding",
         )
 
-        data = {
-            'success': True,
-            'message': 'A Stripe account for shop with ref id ' + str(shop_ref) + ' is awaiting connection.',
-            'data': account_link,
-        }
+        return account_link
 
-        return Response(data, status=status.HTTP_200_OK)
-
-    def delete(self, request, shop_ref):
+    def get(self, request, shop_ref):
         if shop_ref is None:
             raise CustomException(
                 'An shop id must be provided.',
@@ -838,18 +706,93 @@ class PaymentsProviderStripeView(APIView):
             )
 
         try:
-            stripe_details = PaymentProvider.objects.get(shop__ref_id=shop_ref, provider=1)
-            stripe_details.status = -1
-            stripe_details.save()
+            shop = Shop.objects.get(ref_id=shop_ref)
+        except Shop.DoesNotExist:
+            raise CustomException(
+                'A shop with ref id ' + str(shop_ref) + ' was not found.',
+                status.HTTP_404_NOT_FOUND
+            )
+
+        providers = PaymentProvider.objects.filter(shop=shop).exclude(status=-1)
+        provider_data = self.serializer_class(providers, many=True).data
+
+        # combine all provider data
+        combined_provider_data = {}
+        for data in provider_data:
+            combined_provider_data.update(data)
+
+        data = {
+            'success': True,
+            'message': 'Payment providers for shop' + str(shop_ref) + ' were successfully retrieved.',
+            'data': combined_provider_data,
+        }
+
+        return Response(data, status=status.HTTP_200_OK)
+
+    def post(self, request, shop_ref):
+        provider_data = request.data
+        account_link = None
+
+        if shop_ref is None:
+            raise CustomException(
+                'An shop id must be provided.',
+                status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+
+        try:
+            shop = Shop.objects.get(ref_id=shop_ref)
+        except Shop.DoesNotExist:
+            raise CustomException(
+                'A shop with ref id ' + str(shop_ref) + ' was not found.',
+                status.HTTP_404_NOT_FOUND
+            )
+        for key in provider_data:
+            if key == 'stripe':
+                account_link = self.start_stripe_onboarding(shop)
+            else:
+                PaymentProvider.objects.update_or_create(
+                    shop_id=shop.id,
+                    provider=0 if key == 'email' else 2,
+
+                    defaults={
+                        'shop_id': shop.id,
+                        'status': 1 if provider_data.get(key) != '' else -1,
+                        'provider_data': {
+                            key: provider_data.get(key)
+                        },
+                    }
+                )
+
+        data = {
+            'success': True,
+            'message': 'Provider(s) successfully saved.',
+            'data': account_link if account_link else {},
+        }
+
+        return Response(data, status=status.HTTP_200_OK)
+
+    def delete(self, request, shop_ref):
+        provider_data = request.data
+
+        if shop_ref is None:
+            raise CustomException(
+                'An shop id must be provided.',
+                status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+
+        try:
+            provider = PaymentProvider.objects.get(shop__ref_id=shop_ref, provider=provider_data.get('provider'))
+            provider.status = -1
+            provider.save()
         except PaymentProvider.DoesNotExist:
             raise CustomException(
-                'A stripe account for shop with ref id ' + str(shop_ref) + ' was not found.',
+                'A payment provider for shop with a ref id ' + str(shop_ref) + ' was not found.',
                 status.HTTP_404_NOT_FOUND,
             )
 
         data = {
             'success': True,
-            'message': 'A Stripe account for shop with ref id ' + str(shop_ref) + ' was deleted.',
+            'message': 'A payment provider for shop with a ref id ' + str(shop_ref) + ' was deleted.',
             'data': {},
         }
 

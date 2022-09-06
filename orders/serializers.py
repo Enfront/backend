@@ -18,6 +18,7 @@ from shared.exceptions import CustomException
 from carts.views import delete_cart_item
 from customers.models import Customer
 from payments.models import PaymentSession
+from payments.serializers import PaymentSessionSerializer
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -217,8 +218,16 @@ class PublicOrderItemStatusSerializer(serializers.ModelSerializer):
 
 
 class PublicOrderCheckoutSerializer(serializers.ModelSerializer):
+    crypto_session = serializers.SerializerMethodField()
     items = serializers.SerializerMethodField()
     shop = PublicShopOrderSerializer()
+
+    # check if crypto payment is already in progress
+    def get_crypto_session(self, request):
+        existing_crypto_session = PaymentSession.objects.filter(order=request.id, provider=2, status=0).last()
+        existing_crypto_session_data = PaymentSessionSerializer(existing_crypto_session).data
+
+        return existing_crypto_session_data
 
     def get_items(self, request):
         order_items = []
@@ -233,7 +242,8 @@ class PublicOrderCheckoutSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ['email', 'currency', 'current_status', 'total', 'shop', 'items', 'ref_id', 'created_at']
+        fields = ['email', 'currency', 'current_status', 'total', 'shop', 'items', 'ref_id', 'created_at',
+                  'crypto_session']
 
 
 class PublicOrderOwnerSerializer(PublicOrderCheckoutSerializer):
