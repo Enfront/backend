@@ -261,7 +261,7 @@ class ThemeTemplateView(APIView):
         return editor_file.read()
 
     def get_products(self, shop_ref):
-        products = Product.objects.filter(shop__ref_id=shop_ref, status=1)
+        products = Product.objects.filter(shop__ref_id=shop_ref, status=1).order_by('name')
         products_data = PublicProductSerializer(products, many=True).data
 
         return products_data
