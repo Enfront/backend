@@ -658,6 +658,7 @@ class PaymentsStripeIpnView(APIView):
 
 
 class PaymentsProviderView(APIView):
+    permission_classes = [AllowAny]
     serializer_class = PublicPaymentProviderSerializer
 
     def start_stripe_onboarding(self, shop):
