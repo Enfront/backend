@@ -135,6 +135,7 @@ class CartAddItemView(APIView):
 
         cart_item_details = {
             'product': cart_data.get('product'),
+            'quantity': cart_data.get('quantity', 1),
             'cart': cart.ref_id,
         }
 
@@ -184,7 +185,7 @@ class CartRemoveItemView(APIView):
                 expires_at__gt=timezone.now()
             )
 
-            if cart_item.quantity > 1 and cart_item.quantity - 1 > product.min_order_quantity:
+            if cart_item.quantity > 1 and cart_item.quantity - 1 >= product.min_order_quantity:
                 cart_item.quantity = cart_item.quantity - 1
                 cart_item.save()
             else:

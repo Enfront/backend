@@ -266,7 +266,7 @@ class ThemeTemplateView(APIView):
 
         return products_data
 
-    def get_product(self, shop_ref, item_slug):
+    def get_product(self, shop_ref, item_slug, cart=None):
         if item_slug is None:
             return None
 
@@ -284,7 +284,9 @@ class ThemeTemplateView(APIView):
                     'sunt in culpa qui officia deserunt mollit anim id est laborum.',
                 'price': 250.00,
                 'shop_id': str(shop_ref),
-                'images': [{'id': 3, 'path': '/media/items/0b5458bc-5c33-45f5-85c7-74b229c820c9.jpeg'}]
+                'images': [{'id': 3, 'path': '/media/items/0b5458bc-5c33-45f5-85c7-74b229c820c9.jpeg'}],
+                'min_order_quantity': 1,
+                'max_order_quantity': 20,
             }
 
             return product
@@ -292,6 +294,13 @@ class ThemeTemplateView(APIView):
         try:
             product = Product.objects.get(shop__ref_id=shop_ref, slug=item_slug)
             product = PublicProductSerializer(product).data
+
+            # change min order quantity if a user already has the item in their cart
+            if cart is not None:
+                for cart_item in cart['items']:
+                    if product['min_order_quantity'] - cart_item['quantity'] <= 0:
+                        product['min_order_quantity'] = 1
+
         except Product.DoesNotExist:
             return None
 
@@ -411,12 +420,13 @@ class ThemeTemplateView(APIView):
 
         user_cookie = request.COOKIES.get('_enfront_uid')
         cart_cookie = request.COOKIES.get('_enfront_cid')
+        cart = self.get_cart(cart_cookie)
 
         template_data = {
-            'cart': self.get_cart(cart_cookie),
+            'cart': cart,
             'csrf_token': get_token(request),
             'currency': get_currency_symbol(shop.currency),
-            'product': self.get_product(shop.ref_id, item_slug),
+            'product': self.get_product(shop.ref_id, item_slug, cart),
             'products': self.get_products(shop.ref_id),
             'required_header_content': self.get_header_content(request.query_params.get('editor')),
             'shop_ref': shop.ref_id,

@@ -31,6 +31,7 @@ class CartItemSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         product = self.get_product(validated_data.get('product'))
         cart = self.get_cart(validated_data.get('cart'))
+        quantity = validated_data.get('quantity')
 
         cart_item, created = CartItem.objects.get_or_create(
             cart=cart,
@@ -38,15 +39,11 @@ class CartItemSerializer(serializers.ModelSerializer):
             expires_at__gt=timezone.now(),
 
             defaults={
-                'cart': cart,
-                'product': product
+                'product': product,
+                'quantity': quantity,
+                'cart': cart
             }
         )
-
-        # make sure we adhere to the order minimums
-        if created:
-            cart_item.quantity = product.min_order_quantity
-            cart_item.save()
 
         # make sure we adhere to the order maximums
         if not created and cart_item.quantity < product.max_order_quantity:
@@ -56,8 +53,8 @@ class CartItemSerializer(serializers.ModelSerializer):
                 cart_item.quantity = product.min_order_quantity
                 cart_item.save()
 
-            # the item is already in a cart so just add 1 to the quantity
-            cart_item.quantity = cart_item.quantity + 1
+            # the item is already in a cart so just add to the quantity
+            cart_item.quantity = cart_item.quantity + quantity
             cart_item.save()
 
     class Meta:
