@@ -1,8 +1,5 @@
 from django.utils.text import slugify
-
 from rest_framework import serializers
-
-from uuid import UUID
 
 from .models import Product, DigitalProduct
 
@@ -56,6 +53,7 @@ class PublicProductSerializer(serializers.ModelSerializer):
     images = serializers.SerializerMethodField()
     price = serializers.SerializerMethodField()
     available = serializers.SerializerMethodField()
+    max_order_quantity = serializers.SerializerMethodField()
 
     def get_images(self, request):
         images = FileData.objects.filter(itemimage__item_id=request.id).exclude(status=-1)
@@ -71,6 +69,12 @@ class PublicProductSerializer(serializers.ModelSerializer):
             return False
 
         return True
+
+    def get_max_order_quantity(self, request):
+        if request.max_order_quantity > request.stock:
+            return request.stock
+
+        return request.max_order_quantity
 
     class Meta:
         model = Product

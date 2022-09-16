@@ -45,15 +45,11 @@ class CartItemSerializer(serializers.ModelSerializer):
             }
         )
 
-        # make sure we adhere to the order maximums
         if not created and cart_item.quantity < product.max_order_quantity:
-
-            # check to see if the amount at the minimum
             if cart_item.quantity < product.min_order_quantity:
                 cart_item.quantity = product.min_order_quantity
                 cart_item.save()
 
-            # the item is already in a cart so just add to the quantity
             cart_item.quantity = cart_item.quantity + quantity
             cart_item.save()
 

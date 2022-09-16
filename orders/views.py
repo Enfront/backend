@@ -1,14 +1,12 @@
-from django.shortcuts import render
 from django.utils import timezone
 from django.http import HttpResponseRedirect
 from django.db.models.functions import ExtractDay
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.db.models import Q
-
 from rest_framework import status
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from ipware import get_client_ip
@@ -191,12 +189,17 @@ class OrderView(APIView, PaginationMixin):
 
         cart_items = get_users_cart_items(cart)
 
-        # check if item quantities are in the specified bounds
         for item in cart_items:
             if item['quantity'] < item['min_order_quantity'] or item['quantity'] > item['max_order_quantity']:
                 raise CustomException(
                     'Quantity must be between ' + item['min_order_quantity'] + ' and ' + item['max_order_quantity'],
-                    status.HTTP_400_BAD_REQUEST
+                    status.HTTP_409_CONFLICT
+                )
+
+            if item['stock'] < item['quantity']:
+                raise CustomException(
+                    'The quantity of ' + item['name'] + ' exceeds stock levels.',
+                    status.HTTP_409_CONFLICT
                 )
 
         context = {
@@ -303,7 +306,6 @@ class OrderView(APIView, PaginationMixin):
 
 
 class OrderCommentView(APIView):
-    permission_classes = [IsAuthenticated]
     serializer_class = OrderCommentSerializer
 
     def post(self, request):
@@ -371,8 +373,6 @@ class OrderCommentView(APIView):
 
 
 class OrderStatView(APIView):
-    permission_classes = [IsAuthenticated]
-
     def daterange(self, start_date, end_date):
         for n in range(int((end_date - start_date).days)):
             yield start_date + timedelta(n)
