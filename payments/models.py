@@ -1,6 +1,5 @@
 from django.db import models
 
-from picklefield.fields import PickledObjectField
 from uuid import uuid4
 
 from shared.models import TimestampedModel
@@ -19,33 +18,13 @@ class Payment(TimestampedModel):
         (CRYPTO, 'crypto'),
     )
 
-    REFUNDED = -3
-    PARTIALLY_REFUNDED = -2
-    CANCELED = -1
-    NOT_PAID = 0
-    AWAITING = 1
-    REQUIRES_ACTION = 2
-    CAPTURED = 3
-
-    STATUS_CHOICES = (
-        (REFUNDED, 'refunded'),
-        (PARTIALLY_REFUNDED, 'paritally refunded'),
-        (CANCELED, 'canceled'),
-        (NOT_PAID, 'not paid'),
-        (AWAITING, 'awaiting'),
-        (REQUIRES_ACTION, 'requires action'),
-        (CAPTURED, 'captured'),
-    )
-
     order = models.ForeignKey(Order, on_delete=models.CASCADE, blank=True)
     captured_at = models.DateTimeField(blank=True, null=True)
     canceled_at = models.DateTimeField(blank=True, null=True)
     provider = models.SmallIntegerField(choices=PROVIDER_CHOICES, default=None)
     provider_data = models.JSONField(blank=True, null=True)
     fee = models.BigIntegerField(default=0)
-    status = models.SmallIntegerField(choices=STATUS_CHOICES, default=NOT_PAID)
     ref_id = models.UUIDField(default=uuid4, editable=False, unique=True, null=True)
-    idempotency_key = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         db_table = 'payment'
@@ -80,7 +59,6 @@ class PaymentSession(TimestampedModel):
     provider = models.SmallIntegerField(choices=PROVIDER_CHOICES, default=None)
     provider_data = models.JSONField(blank=True, null=True)
     status = models.SmallIntegerField(choices=STATUS_CHOICES, default=PENDING)
-    idempotency_key = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         db_table = 'payment_session'
@@ -112,10 +90,3 @@ class PaymentProvider(TimestampedModel):
 
     class Meta:
         db_table = 'payment_provider'
-
-
-class PaymentCrypto(models.Model):
-    btcpay_data = PickledObjectField(blank=True, null=True)
-
-    class Meta:
-        db_table = 'payment_crypto'

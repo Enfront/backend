@@ -1,5 +1,8 @@
 from api.settings.core import *
 
+import btcpay
+import stripe
+
 # Take environment variables from .env-staging
 dotenv_path = os.path.join(BASE_DIR, 'api/env', '.env-staging')
 load_dotenv(dotenv_path)
@@ -82,3 +85,15 @@ RECAPTCHA_PRIVATE_KEY = os.environ['RECAPTCHA_PRIVATE_KEY']
 AWS_ACCESS_KEY_ID = os.environ['AWS_ACCESS_KEY_ID']
 AWS_SECRET_ACCESS_KEY = os.environ['AWS_SECRET_ACCESS_KEY']
 AWS_DEFAULT_REGION = os.environ['AWS_DEFAULT_REGION']
+
+# BTCPay Server
+# https://btcpayserver.org/
+
+btcpay.api_key = os.environ['BTC_API_KEY']
+btcpay.host_url = os.environ['BTC_HOST']
+btcpay.store_id = os.environ['BTC_STORE_ID']
+
+
+# Stripe
+# https://pypi.org/project/stripe/
+stripe.api_key = os.environ['STRIPE_KEY']

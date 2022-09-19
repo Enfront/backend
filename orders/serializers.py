@@ -2,6 +2,7 @@ from django.utils import timezone
 from rest_framework import serializers, status
 
 import decimal
+import btcpay
 
 from uuid import UUID, uuid4
 from itertools import chain
@@ -18,7 +19,6 @@ from shared.exceptions import CustomException
 from carts.views import delete_cart_item
 from customers.models import Customer
 from payments.models import PaymentSession
-from payments.serializers import PaymentSessionSerializer
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -218,16 +218,23 @@ class PublicOrderItemStatusSerializer(serializers.ModelSerializer):
 
 
 class PublicOrderCheckoutSerializer(serializers.ModelSerializer):
-    crypto_session = serializers.SerializerMethodField()
+    crypto = serializers.SerializerMethodField()
     items = serializers.SerializerMethodField()
     shop = PublicShopOrderSerializer()
 
-    # check if crypto payment is already in progress
-    def get_crypto_session(self, request):
-        existing_crypto_session = PaymentSession.objects.filter(order=request.id, provider=2, status=0).last()
-        existing_crypto_session_data = PaymentSessionSerializer(existing_crypto_session).data
+    def get_crypto(self, request):
+        existing_session = PaymentSession.objects.filter(order=request.id, provider=2, status=0).last()
 
-        return existing_crypto_session_data
+        if not existing_session:
+            return None
+
+        session_id = existing_session.provider_data['invoiceId']
+        invoice = btcpay.Invoices.get_invoice(session_id)
+
+        payment_methods = btcpay.Invoices.get_invoice_payment_methods(session_id)
+        payment_methods[0]['status'] = invoice.get('status')
+
+        return payment_methods[0]
 
     def get_items(self, request):
         order_items = []
@@ -242,8 +249,7 @@ class PublicOrderCheckoutSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ['email', 'currency', 'current_status', 'total', 'shop', 'items', 'ref_id', 'created_at',
-                  'crypto_session']
+        fields = ['email', 'currency', 'current_status', 'total', 'shop', 'items', 'ref_id', 'created_at', 'crypto']
 
 
 class PublicOrderOwnerSerializer(PublicOrderCheckoutSerializer):

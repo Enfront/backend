@@ -10,8 +10,8 @@ import math
 from .models import Payment, PaymentSession, PaymentProvider
 
 from orders.models import Order
-from shared.services import get_order_fees
 from shared.exceptions import CustomException
+from shared.services import get_order_fees
 
 
 class PaymentSerializer(serializers.ModelSerializer):
@@ -74,7 +74,6 @@ class PublicPaymentProviderSerializer(serializers.ModelSerializer):
 
     def get_stripe_id(self, request):
         if request.provider == 1:
-            # check if stripe onboarding is complete
             if not request.provider_data.get('details_submitted') and not request.provider_data.get('charges_enabled'):
                 return None
 
@@ -84,7 +83,6 @@ class PublicPaymentProviderSerializer(serializers.ModelSerializer):
         if request.provider == 2:
             return request.provider_data['bitcoin_address']
 
-    # Here we filter the null values and creates a new dictionary
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep = OrderedDict(filter(itemgetter(1), rep.items()))
