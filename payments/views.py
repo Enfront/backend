@@ -49,9 +49,9 @@ def get_paypal_status(provider_status):
             paypal_status = -2
         case 'PAYMENT.CAPTURE.REVERSED' | 'PAYMENT.CAPTURE.REFUNDED' | 'PAYMENT.AUTHORIZATION.VOIDED':
             paypal_status = -1
-        case 'PAYMENT.AUTHORIZATION.CREATED' | 'PAYMENT.CAPTURE.PENDING':
+        case 'PAYMENT.CAPTURE.PENDING':
             paypal_status = 0
-        case 'PAYMENT.CAPTURE.COMPLETED':
+        case 'PAYMENT.AUTHORIZATION.CREATED' | 'PAYMENT.CAPTURE.COMPLETED':
             paypal_status = 2
         case _:
             paypal_status = -2
