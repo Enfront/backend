@@ -26,6 +26,9 @@ class PaymentSerializer(serializers.ModelSerializer):
                 status.HTTP_404_NOT_FOUND
             )
 
+        if request['canceled_at'] is not None:
+            return 0
+
         return get_order_fees(order.total, order.shop.ref_id, request['provider'])
 
     def create(self, validated_data):

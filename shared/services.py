@@ -83,7 +83,7 @@ def get_total_fees(shop_ref):
     for order in orders:
         if order.current_status >= 1:
             try:
-                payment = Payment.objects.get(order=order, status=3)
+                payment = Payment.objects.get(order=order, canceled_at=None)
                 total_fees += payment.fee
             except Payment.DoesNotExist:
                 continue

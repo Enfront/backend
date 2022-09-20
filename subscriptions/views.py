@@ -25,8 +25,6 @@ from products.models import Product
 from shared.services import get_url, get_subscription, get_total_fees
 from shared.exceptions import CustomException
 
-stripe.api_key = os.environ['STRIPE_KEY']
-
 
 class SubscriptionStripeView(APIView):
     def get(self, request, user_ref, shop_ref):
