@@ -34,6 +34,7 @@ from carts.views import get_users_cart, get_users_cart_items
 from shared.exceptions import CustomException
 from shared.services import send_mailgun_email, get_url
 from shared.pagination import PaginationMixin, CustomPagination
+from payments.paypal.paypal import PayPalClient
 from products.serializers import PublicProductSerializer
 from blacklists.models import Blacklist
 from customers.models import Customer
@@ -126,6 +127,8 @@ class OrderView(APIView, PaginationMixin):
 
     def get(self, request, order_ref=None, shop_ref=None):
         orders = None
+        paypal_client = PayPalClient()
+        context = {'paypal_client': paypal_client}
 
         if order_ref is not None:
             try:
@@ -135,7 +138,7 @@ class OrderView(APIView, PaginationMixin):
                 if 'checkout' in request.path:
                     orders = PublicOrderCheckoutSerializer(order).data
                 else:
-                    orders = PublicOrderOwnerSerializer(order).data
+                    orders = PublicOrderOwnerSerializer(order, context=context).data
             except Order.DoesNotExist:
                 raise CustomException(
                     'An order with order id ' + str(order_ref) + ' was not found.',
@@ -161,10 +164,10 @@ class OrderView(APIView, PaginationMixin):
             page = self.paginate_queryset(order)
 
             if page is not None:
-                orders_data = PublicOrderOwnerSerializer(page, many=True).data
+                orders_data = PublicOrderOwnerSerializer(page, context=context, many=True).data
                 orders = self.get_paginated_response(orders_data).data
             else:
-                orders = PublicOrderOwnerSerializer(order, many=True).data
+                orders = PublicOrderOwnerSerializer(order, context=context, many=True).data
 
         data = {
             'success': True,

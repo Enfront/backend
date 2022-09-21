@@ -1,11 +1,14 @@
 from django.utils import timezone
 from rest_framework import serializers, status
 
+from paypalcheckoutsdk.orders import OrdersGetRequest
+from paypalhttp.http_error import HttpError
+from uuid import UUID, uuid4
+from itertools import chain
+
 import decimal
 import btcpay
 
-from uuid import UUID, uuid4
-from itertools import chain
 
 from .models import Order, OrderItem, OrderStatus, OrderItemStatus, OrderUserData, OrderComment
 
@@ -18,7 +21,7 @@ from users.serializers import PublicUserInfoSerializer
 from shared.exceptions import CustomException
 from carts.views import delete_cart_item
 from customers.models import Customer
-from payments.models import PaymentSession
+from payments.models import PaymentSession, Payment
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -304,15 +307,21 @@ class PublicOrderOwnerSerializer(PublicOrderCheckoutSerializer):
 
     def get_paypal_email(self, request):
         try:
-            payment_session = PaymentSession.objects.get(order_id=request.id, status=2)
-            print(request.id)
-        except PaymentSession.DoesNotExist:
+            payment = Payment.objects.get(order_id=request.id, canceled_at=None)
+        except Payment.DoesNotExist:
             return None
 
-        if payment_session.provider != 0:
+        if payment.provider != 0:
             return None
 
-        return payment_session.provider_data['payer']['email_address']
+        try:
+            paypal_order_id = payment.provider_data['resource']['supplementary_data']['related_ids']['order_id']
+            paypal_request = OrdersGetRequest(paypal_order_id)
+            response = self.context['paypal_client'].client.execute(paypal_request)
+        except HttpError:
+            return None
+
+        return response.result.payer.email_address
 
     class Meta:
         model = Order
