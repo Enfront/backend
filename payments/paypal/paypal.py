@@ -140,7 +140,7 @@ class PaymentPayPalView(PayPalClient, APIView):
                     'invoice_id': order_ref,
                     'custom_id': order.email,
                     'payee': {
-                        'email': self.get_merchant_id(shop),
+                        'email_address': self.get_merchant_id(shop),
                     },
                     'amount': {
                         'currency_code': order.currency,
