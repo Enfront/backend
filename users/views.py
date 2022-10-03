@@ -119,13 +119,10 @@ class RegisterUserView(APIView):
 
                 return HttpResponseRedirect(get_url('/register', register_data.get('shop_name')))
 
-            data = {
-                'success': False,
-                'message': 'The request is not valid.',
-                'data': {},
-            }
-
-            return Response(data, status.HTTP_400_BAD_REQUEST)
+            raise CustomException(
+                'The request is not valid.',
+                status.HTTP_400_BAD_REQUEST
+            )
 
         created_user = serialized_data.create(serialized_data.validated_data, register_data.get('shop_name'))
         if created_user is None:
@@ -177,9 +174,10 @@ class ForgotPasswordView(APIView):
 
     def post(self, request):
         forgot_data = request.data
+        is_dashboard = forgot_data.get('shop', False)
 
         if forgot_data.get('email') is None:
-            if forgot_data.get('shop') is None:
+            if not is_dashboard:
                 create_form_errors(
                     'form',
                     'Email must be provided.',
@@ -190,53 +188,56 @@ class ForgotPasswordView(APIView):
                 'Email must be provided.',
                 status.HTTP_422_UNPROCESSABLE_ENTITY
             )
+        elif not is_dashboard and forgot_data.get('shop_name') is None:
+            create_form_errors(
+                'form',
+                'There is an error with this request.',
+                status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
 
-        captcha_valid = ReCaptchaField(widget=ReCaptchaV3)
-        if not captcha_valid:
-            if forgot_data.get('shop') is None:
+        is_captcha_valid = ReCaptchaField(widget=ReCaptchaV3)
+        if not is_captcha_valid:
+            if not is_dashboard:
                 create_form_errors(
                     'form',
                     'Recaptcha failed.',
-                    status.HTTP_401_UNAUTHORIZED
+                    status.HTTP_400_BAD_REQUEST
                 )
 
-            data = {
-                'success': False,
-                'message': 'Recaptcha failed.',
-                'data': {},
-            }
-
-            return Response(data, status.HTTP_401_UNAUTHORIZED)
+            raise CustomException(
+                'The request is not valid.',
+                status.HTTP_400_BAD_REQUEST
+            )
 
         try:
-            if forgot_data.get('shop') is None:
-                shop = Shop.objects.get(name=forgot_data.get('shop_name'))
-                user_info = User.objects.get(email=forgot_data.get('email'), customer__shop=shop)
+            if not is_dashboard:
+                shop = Shop.objects.get(name=forgot_data['shop_name'])
+                user_info = User.objects.get(email=forgot_data['email'], customer__shop=shop)
             else:
-                user_info = User.objects.get(email=forgot_data.get('email'), customer=None)
+                user_info = User.objects.get(email=forgot_data['email'], customer=None)
         except User.DoesNotExist:
-            if forgot_data.get('shop') is None:
+            if not is_dashboard:
                 create_form_errors(
                     'form',
-                    'A user with the email ' + forgot_data.get('email') + ' does not exist.',
+                    'A user with the email ' + forgot_data['email'] + ' does not exist.',
                     status.HTTP_404_NOT_FOUND
                 )
 
-                return HttpResponseRedirect(get_url('/forgot', forgot_data.get('shop_name')))
+                return HttpResponseRedirect(get_url('/forgot', forgot_data['shop_name']))
 
             raise CustomException(
-                'A user with the email ' + forgot_data.get('email') + ' does not exist.',
+                'A user with the email ' + forgot_data['email'] + ' does not exist.',
                 status.HTTP_404_NOT_FOUND
             )
 
         self.send_forgot_email(user_info, forgot_data.get('shop_name'))
 
-        if forgot_data.get('shop') is None:
-            return HttpResponseRedirect(get_url('/', forgot_data.get('shop_name')))
+        if not is_dashboard:
+            return HttpResponseRedirect(get_url('/', forgot_data['shop_name']))
 
         data = {
             'success': True,
-            'message': 'Reset password email successfully sent.',
+            'message': 'Forgot password email successfully sent.',
             'data': {},
         }
 
