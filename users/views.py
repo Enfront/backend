@@ -1,10 +1,8 @@
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
 from django.utils.safestring import mark_safe
 from django.utils.text import slugify
 from django.template.loader import render_to_string
 from django.contrib.auth import authenticate, login, logout
-from django.middleware.csrf import rotate_token, get_token
+from django.middleware.csrf import get_token
 from django.http import HttpResponseRedirect
 from django.conf import settings
 
@@ -27,7 +25,6 @@ from shared.services import send_mailgun_email, create_form_errors, get_url
 from shared.exceptions import CustomException
 
 from shops.models import Shop
-from customers.models import Customer
 
 
 class UserView(APIView):
@@ -96,14 +93,23 @@ class RegisterUserView(APIView):
 
     def post(self, request):
         register_data = request.data
+        is_dashboard = register_data.get('shop', False)
+
+        if not is_dashboard and register_data.get('shop_name') is None:
+            create_form_errors(
+                'form',
+                'There is an error with this request.',
+                status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
 
         context = {'request': request}
         serialized_data = self.serializer_class(data=register_data, context=context)
-        is_valid = serialized_data.is_valid(raise_exception=False)
 
-        captcha_valid = ReCaptchaField(widget=ReCaptchaV3)
-        if not is_valid or not captcha_valid:
-            if register_data.get('shop') is None and register_data.get('shop_name') is not None:
+        is_valid = serialized_data.is_valid(raise_exception=False)
+        is_captcha_valid = ReCaptchaField(widget=ReCaptchaV3)
+
+        if not is_valid or not is_captcha_valid:
+            if not is_dashboard:
                 for key, values in serialized_data.errors.items():
                     create_form_errors(
                         key,
@@ -115,28 +121,27 @@ class RegisterUserView(APIView):
 
             data = {
                 'success': False,
-                'message': 'Recaptcha failed.',
+                'message': 'The request is not valid.',
                 'data': {},
             }
 
-            return Response(data, status.HTTP_401_UNAUTHORIZED)
+            return Response(data, status.HTTP_400_BAD_REQUEST)
 
-        user_info = serialized_data.create(serialized_data.validated_data, register_data.get('shop_name'))
+        created_user = serialized_data.create(serialized_data.validated_data, register_data.get('shop_name'))
+        if created_user is None:
+            return HttpResponseRedirect(get_url('/register', register_data['shop_name']))
 
-        if user_info is None:
-            return HttpResponseRedirect(get_url('/register', register_data.get('shop_name')))
+        self.send_activation_email(created_user, register_data.get('shop_name'))
 
-        self.send_activation_email(user_info, register_data.get('shop_name'))
-
-        if register_data.get('shop') is None and register_data.get('shop_name') is not None:
-            return HttpResponseRedirect(get_url('/activate', register_data.get('shop_name')))
+        if not is_dashboard:
+            return HttpResponseRedirect(get_url('/activate', register_data['shop_name']))
 
         data = {
             'success': True,
             'message': 'A user was successfully registered.',
             'data': {
-                'ref_id': user_info.ref_id,
-                'email': user_info.email,
+                'ref_id': created_user.ref_id,
+                'email': created_user.email,
             },
         }
 
