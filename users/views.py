@@ -34,12 +34,6 @@ class UserView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        if not request.user.pk:
-            raise CustomException(
-                'A user with id ' + request.user.pk + ' was not found.',
-                status.HTTP_404_NOT_FOUND,
-            )
-
         user = PublicUserInfoSerializer(request.user).data
 
         data = {
@@ -51,14 +45,8 @@ class UserView(APIView):
         return Response(data, status=status.HTTP_200_OK)
 
     def patch(self, request):
-        if not request.user.pk:
-            raise CustomException(
-                'A user with id ' + request.user.pk + ' was not found.',
-                status.HTTP_404_NOT_FOUND,
-            )
-
         serialized_data = UserSerializer(request.user, data=request.data, partial=True)
-        is_valid = serialized_data.is_valid(raise_exception=True)
+        is_valid = serialized_data.is_valid(raise_exception=False)
 
         if not is_valid:
             raise CustomException(
@@ -464,7 +452,7 @@ class GetCsrfTokenView(APIView):
 
 
 class CheckAuthStatusView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request):
         if not request.user.is_authenticated:
