@@ -5,7 +5,6 @@ from django.contrib.auth import authenticate, login, logout
 from django.middleware.csrf import get_token
 from django.http import HttpResponseRedirect
 from django.conf import settings
-
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -17,13 +16,12 @@ from captcha.widgets import ReCaptchaV3
 
 import os
 
-from .serializers import RegisterUserSerializer, PublicUserInfoSerializer, UserSerializer, ResetPasswordSerializer
 from .models import User
+from .serializers import RegisterUserSerializer, PublicUserInfoSerializer, UserSerializer, ResetPasswordSerializer
 from .tokens import account_activation_token, forgot_password_token
 
-from shared.services import send_mailgun_email, create_form_errors, get_url
 from shared.exceptions import CustomException
-
+from shared.services import send_mailgun_email, create_form_errors, get_url
 from shops.models import Shop
 
 
@@ -96,9 +94,8 @@ class RegisterUserView(APIView):
         is_dashboard = register_data.get('shop', False)
 
         if not is_dashboard and register_data.get('shop_name') is None:
-            create_form_errors(
-                'form',
-                'There is an error with this request.',
+            raise CustomException(
+                'A shop name must be provided.',
                 status.HTTP_422_UNPROCESSABLE_ENTITY
             )
 
@@ -117,7 +114,7 @@ class RegisterUserView(APIView):
                         status.HTTP_400_BAD_REQUEST
                     )
 
-                return HttpResponseRedirect(get_url('/register', register_data.get('shop_name')))
+                return HttpResponseRedirect(get_url('/register', register_data['shop_name']))
 
             raise CustomException(
                 'The request is not valid.',
@@ -176,7 +173,12 @@ class ForgotPasswordView(APIView):
         forgot_data = request.data
         is_dashboard = forgot_data.get('shop', False)
 
-        if forgot_data.get('email') is None:
+        if not is_dashboard and forgot_data.get('shop_name') is None:
+            raise CustomException(
+                'A shop name must be provided.',
+                status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+        elif forgot_data.get('email') is None:
             if not is_dashboard:
                 create_form_errors(
                     'form',
@@ -184,14 +186,10 @@ class ForgotPasswordView(APIView):
                     status.HTTP_422_UNPROCESSABLE_ENTITY
                 )
 
+                return HttpResponseRedirect(get_url('/forgot', forgot_data['shop_name']))
+
             raise CustomException(
                 'Email must be provided.',
-                status.HTTP_422_UNPROCESSABLE_ENTITY
-            )
-        elif not is_dashboard and forgot_data.get('shop_name') is None:
-            create_form_errors(
-                'form',
-                'There is an error with this request.',
                 status.HTTP_422_UNPROCESSABLE_ENTITY
             )
 
@@ -200,9 +198,11 @@ class ForgotPasswordView(APIView):
             if not is_dashboard:
                 create_form_errors(
                     'form',
-                    'Recaptcha failed.',
+                    'The request is not valid.',
                     status.HTTP_400_BAD_REQUEST
                 )
+
+                return HttpResponseRedirect(get_url('/forgot', forgot_data['shop_name']))
 
             raise CustomException(
                 'The request is not valid.',
@@ -250,25 +250,70 @@ class ResetPasswordView(APIView):
 
     def post(self, request):
         reset_data = request.data
+        is_dashboard = reset_data.get('shop', False)
 
-        user_ref = reset_data.get('ref_id')
-        token = reset_data.get('token')
-        shop_name = reset_data.get('shop_name')
-
-        try:
-            user_info = User.objects.get(ref_id=user_ref)
-        except User.DoesNotExist:
-            if reset_data.get('shop') is None:
+        if not is_dashboard and reset_data.get('shop_name') is None:
+            raise CustomException(
+                'A shop name must be provided.',
+                status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+        elif reset_data.get('ref_id') is None:
+            if not is_dashboard:
                 create_form_errors(
                     'form',
-                    'A user with the ref id ' + str(user_ref) + ' does not exist.',
+                    'A user ref id must be provided',
+                    status.HTTP_422_UNPROCESSABLE_ENTITY
+                )
+
+                return HttpResponseRedirect(get_url('/forgot', reset_data['shop_name']))
+
+            return CustomException(
+                'A user ref id must be provided.',
+                status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+        elif reset_data.get('token') is None:
+            if not is_dashboard:
+                create_form_errors(
+                    'form',
+                    'A token must be provided',
+                    status.HTTP_422_UNPROCESSABLE_ENTITY
+                )
+
+                return HttpResponseRedirect(get_url('/forgot', reset_data['shop_name']))
+
+            return CustomException(
+                'A token must be provided.',
+                status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+        elif reset_data.get('password') is None:
+            if not is_dashboard:
+                create_form_errors(
+                    'form',
+                    'A new password must be provided',
+                    status.HTTP_422_UNPROCESSABLE_ENTITY
+                )
+
+                return HttpResponseRedirect(get_url('/forgot', reset_data['shop_name']))
+
+            return CustomException(
+                'A new password must be provided.',
+                status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+
+        try:
+            user_info = User.objects.get(ref_id=reset_data['ref_id'])
+        except User.DoesNotExist:
+            if not is_dashboard:
+                create_form_errors(
+                    'form',
+                    'A user with the ref id ' + str(reset_data['ref_id']) + ' does not exist.',
                     status.HTTP_404_NOT_FOUND
                 )
 
-                return HttpResponseRedirect(get_url('/forgot', shop_name))
+                return HttpResponseRedirect(get_url('/forgot', reset_data['shop_name']))
 
             raise CustomException(
-                'A user with the ref id ' + str(user_ref) + ' does not exist.',
+                'A user with the ref id ' + str(reset_data['ref_id']) + ' does not exist.',
                 status.HTTP_404_NOT_FOUND
             )
 
@@ -277,40 +322,40 @@ class ResetPasswordView(APIView):
         is_valid = serialized_data.is_valid(raise_exception=True)
 
         if not is_valid:
-            if reset_data.get('shop') is None:
+            if not is_dashboard:
                 create_form_errors(
                     'form',
                     'There was a problem changing your password.',
                     status.HTTP_400_BAD_REQUEST
                 )
 
-                return HttpResponseRedirect(get_url('/forgot', shop_name))
+                return HttpResponseRedirect(get_url('/forgot', reset_data['shop_name']))
 
             raise CustomException(
                 'There was a problem changing your password.',
                 status.HTTP_400_BAD_REQUEST
             )
 
-        if not forgot_password_token.check_token(user_info, token):
-            if reset_data.get('shop') is None:
+        if not forgot_password_token.check_token(user_info, reset_data['token']):
+            if not is_dashboard:
                 create_form_errors(
                     'form',
                     'The reset token is not valid.',
                     status.HTTP_401_UNAUTHORIZED
                 )
 
-                return HttpResponseRedirect(get_url('/forgot', shop_name))
+                return HttpResponseRedirect(get_url('/forgot', reset_data['shop_name']))
 
             raise CustomException(
                 'The reset token is not valid',
                 status.HTTP_401_UNAUTHORIZED
             )
 
-        user_info.set_password(reset_data.get('password'))
+        user_info.set_password(reset_data['password'])
         user_info.save()
 
-        if shop_name is not None:
-            return HttpResponseRedirect(get_url('/', shop_name))
+        if not is_dashboard:
+            return HttpResponseRedirect(get_url('/', reset_data['shop_name']))
 
         return HttpResponseRedirect(get_url('/'))
 
@@ -330,13 +375,27 @@ class ActivateUserView(APIView):
             user_info = User.objects.get(ref_id=user_ref)
         except User.DoesNotExist:
             raise CustomException(
-                'A user with the ref id ' + user_ref + ' does not exist.',
+                'A user with the ref id ' + str(user_ref) + ' does not exist.',
                 status.HTTP_404_NOT_FOUND
             )
 
-        if account_activation_token.check_token(user_info, token):
-            user_info.is_active = True
-            user_info.save()
+        if not account_activation_token.check_token(user_info, token):
+            if shop_name:
+                create_form_errors(
+                    'form',
+                    'The activate token is not valid.',
+                    status.HTTP_401_UNAUTHORIZED
+                )
+
+                return HttpResponseRedirect(get_url('/forgot', shop_name))
+
+            raise CustomException(
+                'The activate token is not valid',
+                status.HTTP_401_UNAUTHORIZED
+            )
+
+        user_info.is_active = True
+        user_info.save()
 
         if shop_name is not None:
             return HttpResponseRedirect(get_url('/', shop_name))
@@ -350,57 +409,83 @@ class LoginUserView(APIView):
 
     def post(self, request):
         auth_data = request.data
+        is_dashboard = auth_data.get('shop', False)
 
-        if auth_data.get('shop') is None and auth_data.get('shop_name') is None:
+        if not is_dashboard and auth_data.get('shop_name') is None:
             raise CustomException(
-                'Shop name must be provided.',
+                'A shop name must be provided.',
+                status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+        elif auth_data.get('email') is None:
+            if not is_dashboard:
+                create_form_errors(
+                    'form',
+                    'An email must be provided.',
+                    status.HTTP_422_UNPROCESSABLE_ENTITY
+                )
+
+                return HttpResponseRedirect(get_url('/forgot', auth_data['shop_name']))
+
+            raise CustomException(
+                'An email must be provided.',
+                status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+        elif auth_data.get('password') is None:
+            if not is_dashboard:
+                create_form_errors(
+                    'form',
+                    'A password must be provided.',
+                    status.HTTP_422_UNPROCESSABLE_ENTITY
+                )
+
+                return HttpResponseRedirect(get_url('/forgot', auth_data['shop_name']))
+
+            raise CustomException(
+                'A password must be provided.',
                 status.HTTP_422_UNPROCESSABLE_ENTITY
             )
 
+        is_captcha_valid = ReCaptchaField(widget=ReCaptchaV3)
+        if not is_captcha_valid:
+            if not is_dashboard:
+                create_form_errors(
+                    'form',
+                    'The request is not valid.',
+                    status.HTTP_400_BAD_REQUEST
+                )
+
+                return HttpResponseRedirect(get_url('/login', auth_data['shop_name']))
+
+            raise CustomException(
+                'The request is not valid.',
+                status.HTTP_400_BAD_REQUEST
+            )
+
         user = authenticate(
-            email=auth_data.get('email'),
-            password=auth_data.get('password'),
+            email=auth_data['email'],
+            password=auth_data['password'],
             shop_name=auth_data.get('shop_name')
         )
 
         if user is None:
-            if auth_data.get('shop'):
-                raise CustomException(
+            if not is_dashboard:
+                create_form_errors(
+                    'form',
                     'Email and/or password is incorrect.',
                     status.HTTP_401_UNAUTHORIZED
                 )
 
-            create_form_errors(
-                'form',
+                return HttpResponseRedirect(get_url('/login', auth_data['shop_name']))
+
+            raise CustomException(
                 'Email and/or password is incorrect.',
                 status.HTTP_401_UNAUTHORIZED
             )
 
-            return HttpResponseRedirect(get_url('/login', auth_data.get('shop_name')))
-
-        captcha_valid = ReCaptchaField(widget=ReCaptchaV3)
-        if not captcha_valid:
-            if auth_data.get('shop'):
-                data = {
-                    'success': false,
-                    'message': 'Recaptcha failed.',
-                    'data': {},
-                }
-
-                return Response(data, status=status.HTTP_401_UNAUTHORIZED)
-
-            create_form_errors(
-                'form',
-                'Recaptcha failed.',
-                status.HTTP_401_UNAUTHORIZED
-            )
-
-            return HttpResponseRedirect(get_url('/login', auth_data.get('shop_name')))
-
         login(request, user)
 
-        if auth_data.get('shop') is None:
-            response = HttpResponseRedirect(get_url('/', auth_data.get('shop_name')))
+        if not is_dashboard:
+            response = HttpResponseRedirect(get_url('/', auth_data['shop_name']))
             response.set_cookie('_enfront_uid', user.ref_id, 604800)
 
             return response
@@ -412,7 +497,6 @@ class LoginUserView(APIView):
         }
 
         response = Response(data, status=status.HTTP_200_OK)
-
         return response
 
 
@@ -421,8 +505,9 @@ class LogoutUserView(APIView):
 
     def post(self, request):
         auth_data = request.data
+        is_dashboard = auth_data.get('shop', False)
 
-        if auth_data.get('shop') is None and auth_data.get('shop_name') is None:
+        if not is_dashboard and auth_data.get('shop_name') is None:
             raise CustomException(
                 'Shop name must be provided.',
                 status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -430,8 +515,8 @@ class LogoutUserView(APIView):
 
         logout(request)
 
-        if auth_data.get('shop') is None:
-            return HttpResponseRedirect(get_url('/', auth_data.get('shop_name')))
+        if not is_dashboard:
+            return HttpResponseRedirect(get_url('/', auth_data['shop_name']))
 
         data = {
             'success': True,
@@ -462,13 +547,10 @@ class CheckAuthStatusView(APIView):
 
     def get(self, request):
         if not request.user.is_authenticated:
-            data = {
-                'success': False,
-                'message': 'A session does not exist.',
-                'data': {},
-            }
-
-            return Response(data, status=status.HTTP_401_UNAUTHORIZED)
+            raise CustomException(
+                'A session does not exist.',
+                status.HTTP_401_UNAUTHORIZED
+            )
 
         data = {
             'success': True,
