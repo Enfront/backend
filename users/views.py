@@ -261,13 +261,13 @@ class ResetPasswordView(APIView):
             if not is_dashboard:
                 create_form_errors(
                     'form',
-                    'A user ref id must be provided',
+                    'A user ref id must be provided.',
                     status.HTTP_422_UNPROCESSABLE_ENTITY
                 )
 
                 return HttpResponseRedirect(get_url('/forgot', reset_data['shop_name']))
 
-            return CustomException(
+            raise CustomException(
                 'A user ref id must be provided.',
                 status.HTTP_422_UNPROCESSABLE_ENTITY
             )
@@ -275,13 +275,13 @@ class ResetPasswordView(APIView):
             if not is_dashboard:
                 create_form_errors(
                     'form',
-                    'A token must be provided',
+                    'A token must be provided.',
                     status.HTTP_422_UNPROCESSABLE_ENTITY
                 )
 
                 return HttpResponseRedirect(get_url('/forgot', reset_data['shop_name']))
 
-            return CustomException(
+            raise CustomException(
                 'A token must be provided.',
                 status.HTTP_422_UNPROCESSABLE_ENTITY
             )
@@ -289,13 +289,13 @@ class ResetPasswordView(APIView):
             if not is_dashboard:
                 create_form_errors(
                     'form',
-                    'A new password must be provided',
+                    'A new password must be provided.',
                     status.HTTP_422_UNPROCESSABLE_ENTITY
                 )
 
                 return HttpResponseRedirect(get_url('/forgot', reset_data['shop_name']))
 
-            return CustomException(
+            raise CustomException(
                 'A new password must be provided.',
                 status.HTTP_422_UNPROCESSABLE_ENTITY
             )
@@ -319,7 +319,7 @@ class ResetPasswordView(APIView):
 
         context = {'request': request}
         serialized_data = self.serializer_class(data=reset_data, context=context)
-        is_valid = serialized_data.is_valid(raise_exception=True)
+        is_valid = serialized_data.is_valid(raise_exception=False)
 
         if not is_valid:
             if not is_dashboard:
@@ -374,6 +374,15 @@ class ActivateUserView(APIView):
         try:
             user_info = User.objects.get(ref_id=user_ref)
         except User.DoesNotExist:
+            if shop_name:
+                create_form_errors(
+                    'form',
+                    'A user with the ref id ' + str(user_ref) + ' does not exist.',
+                    status.HTTP_404_NOT_FOUND
+                )
+
+                return HttpResponseRedirect(get_url('/login', shop_name))
+
             raise CustomException(
                 'A user with the ref id ' + str(user_ref) + ' does not exist.',
                 status.HTTP_404_NOT_FOUND
@@ -387,7 +396,7 @@ class ActivateUserView(APIView):
                     status.HTTP_401_UNAUTHORIZED
                 )
 
-                return HttpResponseRedirect(get_url('/forgot', shop_name))
+                return HttpResponseRedirect(get_url('/login', shop_name))
 
             raise CustomException(
                 'The activate token is not valid',
@@ -424,7 +433,7 @@ class LoginUserView(APIView):
                     status.HTTP_422_UNPROCESSABLE_ENTITY
                 )
 
-                return HttpResponseRedirect(get_url('/forgot', auth_data['shop_name']))
+                return HttpResponseRedirect(get_url('/login', auth_data['shop_name']))
 
             raise CustomException(
                 'An email must be provided.',
@@ -438,7 +447,7 @@ class LoginUserView(APIView):
                     status.HTTP_422_UNPROCESSABLE_ENTITY
                 )
 
-                return HttpResponseRedirect(get_url('/forgot', auth_data['shop_name']))
+                return HttpResponseRedirect(get_url('/login', auth_data['shop_name']))
 
             raise CustomException(
                 'A password must be provided.',
