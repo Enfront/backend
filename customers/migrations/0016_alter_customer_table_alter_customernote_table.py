@@ -28,6 +28,8 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('customers', '0015_remove_customer_created_at_and_more'),
+        ('orders', '0022_alter_order_table_alter_ordercomment_table_and_more'),
+        ('users', '0011_alter_user_table'),
     ]
 
     operations = [
