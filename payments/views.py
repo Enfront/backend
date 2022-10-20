@@ -198,7 +198,7 @@ class PaymentProviderView(APIView):
     serializer_class = PublicPaymentProviderSerializer
 
     def start_stripe_onboarding(self, shop):
-        onboarded_data = PaymentProvider.objects.get(shop=shop.id, provider=1)
+        onboarded_data = PaymentProvider.objects.filter(shop=shop.id, provider=1).last()
 
         if onboarded_data:
             stripe_account_id = onboarded_data.provider_data['id']
