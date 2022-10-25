@@ -1,14 +1,11 @@
-from django.utils import timezone
 from rest_framework import serializers, status
 
 from paypalcheckoutsdk.orders import OrdersGetRequest
 from paypalhttp.http_error import HttpError
-from uuid import UUID, uuid4
 from itertools import chain
 
 import decimal
 import btcpay
-
 
 from .models import Order, OrderItem, OrderStatus, OrderItemStatus, OrderUserData, OrderComment
 

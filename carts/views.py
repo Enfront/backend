@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from django.utils import timezone
 from django.http import HttpResponseRedirect
 from django.utils.text import slugify
@@ -10,8 +9,6 @@ from rest_framework import status
 from rest_framework.response import Response
 
 from uuid import uuid4
-
-import os
 
 from .models import Cart, CartItem
 from .serializers import CartItemSerializer

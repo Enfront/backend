@@ -1,10 +1,10 @@
-from django.core.exceptions import FieldError
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
 from .models import FileData
+
+from shared.exceptions import CustomException
 
 
 class FileUploadView(APIView):

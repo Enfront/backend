@@ -1,6 +1,4 @@
 from django.utils import timezone
-from django.template.loader import render_to_string
-from django.http import HttpResponseRedirect
 
 from rest_framework.views import APIView
 from rest_framework import status
@@ -11,9 +9,7 @@ from rest_framework.exceptions import APIException
 from uuid import uuid4
 
 import os
-import requests
 import stripe
-import json
 import time
 
 from .models import Subscription

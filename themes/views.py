@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.utils.text import slugify
 from django.middleware.csrf import get_token
 from django.http import HttpResponse, HttpResponseRedirect
@@ -16,7 +15,6 @@ import os
 import boto3
 import botocore
 import json
-import uuid
 import html
 
 from .models import Theme, ThemeConfiguration

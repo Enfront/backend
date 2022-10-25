@@ -7,6 +7,8 @@ class CustomPagination(PageNumberPagination):
 
 class PaginationMixin(object):
     def __init__(self):
+        self.request = None
+        self.pagination_class = None
         self._paginator = None
 
     @property

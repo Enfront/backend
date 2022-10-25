@@ -1,12 +1,10 @@
-from django.http import HttpResponseRedirect
-
 from rest_framework import status
 from rest_framework import serializers
 
 from .models import User
 
 from shared.exceptions import CustomException
-from shared.services import create_form_errors, get_url
+from shared.services import create_form_errors
 from customers.models import Customer
 from shops.models import Shop
 

@@ -1,4 +1,3 @@
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -6,19 +5,17 @@ from rest_framework.permissions import AllowAny
 
 from paypalcheckoutsdk.core import PayPalHttpClient, LiveEnvironment, SandboxEnvironment
 from paypalcheckoutsdk.payments import AuthorizationsCaptureRequest, AuthorizationsVoidRequest
-from paypalcheckoutsdk.orders import OrdersCreateRequest, OrdersCaptureRequest, OrdersAuthorizeRequest
-from uuid import uuid4
+from paypalcheckoutsdk.orders import OrdersCreateRequest, OrdersAuthorizeRequest
 
-import requests
 import sys
 import os
 
-from payments.models import PaymentProvider, PaymentSession
-from payments.serializers import PaymentSerializer, PaymentSessionSerializer
+from payments.models import PaymentProvider
+from payments.serializers import PaymentSessionSerializer
 from payments.views import check_banned_email, save_payment_session, save_payment, send_virtual_product_email
 from products.views import change_stock
 from orders.models import Order
-from orders.serializers import PublicOrderCheckoutSerializer, OrderStatusSerializer
+from orders.serializers import OrderStatusSerializer
 from shared.exceptions import CustomException
 from shops.models import Shop
 

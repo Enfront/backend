@@ -1,5 +1,3 @@
-from django.shortcuts import render
-
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -106,7 +104,7 @@ class CustomerView(APIView, PaginationMixin):
 
         if not is_valid:
             raise CustomException(
-                'A customer with id ' + str(customer_ref) + ' could not be updated.',
+                'A customer with id ' + str(request['customer_ref']) + ' could not be updated.',
                 status.HTTP_400_BAD_REQUEST
             )
 

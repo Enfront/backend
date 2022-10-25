@@ -1,9 +1,10 @@
 from django.utils import timezone
-from rest_framework import serializers
+from rest_framework import serializers, status
 
 from .models import Cart, CartItem
 
 from products.models import Product
+from shared.exceptions import CustomException
 
 
 class CartItemSerializer(serializers.ModelSerializer):

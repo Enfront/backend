@@ -1,18 +1,15 @@
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-
-from uuid import uuid4
 
 import os
 import stripe
 
 from orders.models import Order
 from orders.serializers import OrderStatusSerializer
-from payments.models import PaymentProvider, Payment
-from payments.serializers import PaymentSerializer, PaymentSessionSerializer
+from payments.models import PaymentProvider
+from payments.serializers import PaymentSessionSerializer
 from payments.views import save_payment, save_payment_session, send_virtual_product_email
 from products.views import change_stock
 from shared.exceptions import CustomException

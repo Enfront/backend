@@ -1,8 +1,6 @@
 from django.contrib.auth.backends import BaseBackend
-from django.contrib.auth.hashers import check_password
 
 from users.models import User
-from customers.models import Customer
 from shops.models import Shop
 
 

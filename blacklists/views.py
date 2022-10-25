@@ -5,6 +5,8 @@ from rest_framework.response import Response
 from .models import Blacklist
 from .serializers import PublicBlacklistSerializer, BlacklistSerializer
 
+from shared.exceptions import CustomException
+
 
 class BlacklistView(APIView):
     serializer_class = BlacklistSerializer

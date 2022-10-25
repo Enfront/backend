@@ -1,13 +1,10 @@
 from django.db import models
-from django.utils import timezone
-from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 
 from uuid import uuid4
 
-from users.managers import CustomUserManager
-from users.models import User
-from shops.models import Shop
 from shared.models import TimestampedModel
+from shops.models import Shop
+from users.models import User
 
 
 # Create your models here.

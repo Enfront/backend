@@ -7,11 +7,10 @@ from .models import Customer, CustomerNote
 
 from orders.models import Order
 from orders.serializers import PublicOrderCheckoutSerializer
-from shops.models import Shop
+from shared.exceptions import CustomException
+from shared.pagination import PaginationMixin
 from users.models import User
 from users.serializers import PublicUserInfoSerializer
-from shared.pagination import PaginationMixin
-from shared.exceptions import CustomException
 
 
 class CustomerSerializer(serializers.ModelSerializer):
@@ -46,7 +45,7 @@ class CustomerNoteSerializer(serializers.ModelSerializer):
                 status.HTTP_404_NOT_FOUND
             )
 
-    def get_user(self, _):
+    def get_user(self, validated_data):
         try:
             user = User.objects.get(pk=self.context.get('request').user.pk)
             return user

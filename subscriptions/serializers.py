@@ -6,9 +6,6 @@ from .models import Subscription, SubscriptionPayment
 from users.models import User
 from shared.services import get_total_fees
 from shared.exceptions import CustomException
-from orders.models import Order
-from orders.serializers import PublicOrderCheckoutSerializer
-from payments.models import Payment
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):

@@ -1,7 +1,6 @@
 from django.utils.text import slugify
 from rest_framework import status
 
-import math
 import datetime
 import requests
 import decimal

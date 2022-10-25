@@ -12,7 +12,6 @@ from .models import Product, DigitalProduct
 from .serializers import ProductSerializer, PublicProductOwnerSerializer
 
 from shared.exceptions import CustomException
-from shared.services import get_subscription
 from file_uploads.models import ItemImage
 
 
