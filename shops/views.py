@@ -1,6 +1,5 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
 from rest_framework import status
 
 from .models import Shop
@@ -64,16 +63,26 @@ class ShopView(APIView):
 
         if shop_data.get('email') is None:
             raise CustomException(
-                'Shop email is required.',
+                'A shop email is required.',
                 status.HTTP_422_UNPROCESSABLE_ENTITY
             )
         elif shop_data.get('name') is None:
             raise CustomException(
-                'Shop name is required.',
+                'A shop name is required.',
+                status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+        elif shop_data.get('domain') is None:
+            raise CustomException(
+                'A domain is required.',
+                status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+        elif shop_data.get('country') is None:
+            raise CustomException(
+                'A country is required.',
                 status.HTTP_422_UNPROCESSABLE_ENTITY
             )
 
-        if self.check_existing_domain(shop_data.get('domain')):
+        if self.check_existing_domain(shop_data['domain']):
             raise CustomException(
                 'A shop with this domain already exists.',
                 status.HTTP_409_CONFLICT
@@ -81,12 +90,12 @@ class ShopView(APIView):
 
         context = {'request': request, 'country': shop_data['country']}
         serialized_data = ShopSerializer(data=shop_data, context=context)
-        is_valid = serialized_data.is_valid(raise_exception=True)
+        is_valid = serialized_data.is_valid()
 
         if not is_valid:
             data = {
                 'success': False,
-                'message': 'Shop data is not valid.',
+                'message': 'Shop data is invalid.',
                 'data': {}
             }
 
@@ -113,7 +122,7 @@ class ShopView(APIView):
 
         return Response(data, status=status.HTTP_201_CREATED)
 
-    def put(self, request, ref_id):
+    def put(self, request, ref_id=None):
         shop_data = request.data
 
         if ref_id is None:
@@ -121,28 +130,43 @@ class ShopView(APIView):
                 'A shop ref must be provided.',
                 status.HTTP_422_UNPROCESSABLE_ENTITY
             )
+        elif shop_data.get('status') is None:
+            raise CustomException(
+                'A status must be provided.',
+                status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+        elif shop_data.get('domain') is None:
+            raise CustomException(
+                'A domain must be provided.',
+                status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
 
-        if self.check_existing_domain(shop_data.get('domain'), ref_id):
+        try:
+            shop = Shop.objects.get(ref_id=ref_id)
+        except Shop.DoesNotExist:
+            raise CustomException(
+                'A shop with the ref id ' + str(ref_id) + ' could not be found.',
+                status.HTTP_404_NOT_FOUND,
+            )
+
+        if self.check_existing_domain(shop_data['domain'], ref_id):
             raise CustomException(
                 'A shop with with this domain already exists.',
                 status.HTTP_409_CONFLICT,
             )
 
-        try:
-            shop = Shop.objects.get(ref_id=ref_id)
-            if int(shop_data.get('status')) == 1 and int(shop_data.get('status')) != shop.status:
-                self.check_subscription_limits(shop.owner.pk, True)
+        if int(shop_data['status']) == 1 and int(shop_data['status']) != shop.status:
+            self.check_subscription_limits(shop.owner.pk, True)
 
-            shop.name = shop_data.get('name')
-            shop.email = shop_data.get('email')
-            shop.status = shop_data.get('status')
-            shop.domain = shop_data.get('domain')
-            shop.save()
-        except Shop.DoesNotExist:
-            raise CustomException(
-                'There was an error editing shop with id ' + str(ref_id) + '.',
-                status.HTTP_400_BAD_REQUEST,
-            )
+        if shop_data.get('name') is not None:
+            shop.name = shop_data['name']
+
+        if shop_data.get('email') is not None:
+            shop.email = shop_data['email']
+
+        shop.status = shop_data['status']
+        shop.domain = shop_data['domain']
+        shop.save()
 
         data = {
             'success': True,
@@ -152,7 +176,7 @@ class ShopView(APIView):
 
         return Response(data, status=status.HTTP_200_OK)
 
-    def delete(self, request, ref_id):
+    def delete(self, request, ref_id=None):
         if ref_id is None:
             raise CustomException(
                 'A shop ref must be provided.',

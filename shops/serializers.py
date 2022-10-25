@@ -1,16 +1,17 @@
 from django.utils.text import slugify
 from rest_framework import serializers
+from rest_framework import status
 
 from uuid import uuid4
 import os
 
 from .models import Shop
 
-from users.models import User
+from countries.models import Country
+from countries.serializers import PublicCountrySerializer
+from shared.exceptions import CustomException
 from themes.models import Theme, ThemeConfiguration
 from themes.serializers import PublicThemeSerializer
-from countries.serializers import PublicCountrySerializer
-from countries.models import Country
 
 
 class ShopSerializer(serializers.ModelSerializer):
@@ -20,17 +21,7 @@ class ShopSerializer(serializers.ModelSerializer):
         return Country.objects.get(id=self.context['country'])
 
     def create(self, validated_data, **kwargs):
-        if not validated_data['email']:
-            raise CustomException(
-                'Shop email must be included in the request.',
-                status.HTTP_422_UNPROCESSABLE_ENTITY
-            )
-        elif not validated_data['name']:
-            raise CustomException(
-                'Shop name must be included in the request.',
-                status.HTTP_422_UNPROCESSABLE_ENTITY
-            )
-        elif not kwargs.get('owner_id'):
+        if not kwargs.get('owner_id'):
             raise CustomException(
                 'Owner id must be included in the request.',
                 status.HTTP_422_UNPROCESSABLE_ENTITY
