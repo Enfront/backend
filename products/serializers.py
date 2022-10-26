@@ -93,7 +93,7 @@ class PublicProductOwnerSerializer(serializers.ModelSerializer):
         return image_data
 
     def get_keys(self, request):
-        keys = DigitalProduct.objects.filter(product=request.id).exclude(status=-1)
+        keys = DigitalProduct.objects.filter(product=request.id, status=0)
         key_data = PublicDigitalProductSerializer(instance=keys, many=True).data
 
         return key_data
