@@ -311,14 +311,16 @@ class PublicOrderOwnerSerializer(PublicOrderCheckoutSerializer):
         if payment.provider != 0:
             return None
 
-        try:
-            paypal_order_id = payment.provider_data['resource']['supplementary_data']['related_ids']['order_id']
-            paypal_request = OrdersGetRequest(paypal_order_id)
-            response = self.context['paypal_client'].client.execute(paypal_request)
-        except HttpError:
-            return None
+        # TODO: find work around for collecting the users paypal email
+        # try:
+        #     paypal_order_id = payment.provider_data['resource']['supplementary_data']['related_ids']['order_id']
+        #     paypal_request = OrdersGetRequest(paypal_order_id)
+        #     response = self.context['paypal_client'].client.execute(paypal_request)
+        # except HttpError:
+        #    return None
 
-        return response.result.payer.email_address
+        # return response.result.payer.email_address
+        return None
 
     class Meta:
         model = Order
