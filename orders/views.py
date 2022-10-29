@@ -436,7 +436,7 @@ class OrderStatView(APIView):
         return PublicOrderOwnerSerializer(new_orders, many=True).data
 
     def get_top_products(self, shop):
-        top_products = Product.objects.annotate(
+        top_products = Product.objects.filter(shop=shop).annotate(
             num_orders=Count('orderitem__quantity')
         ).order_by('-num_orders')[:5]
 
