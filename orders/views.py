@@ -3,7 +3,7 @@ from django.http import HttpResponseRedirect
 from django.db.models.functions import ExtractDay
 from django.template.loader import render_to_string
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import Q, Count
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
@@ -35,9 +35,11 @@ from shared.exceptions import CustomException
 from shared.services import send_mailgun_email, get_url
 from shared.pagination import PaginationMixin, CustomPagination
 from payments.paypal.paypal import PayPalClient
+from products.models import Product
 from products.serializers import PublicProductSerializer
 from blacklists.models import Blacklist
 from customers.models import Customer
+from customers.serializers import PublicCustomerInfoSerializer
 from users.models import User
 
 
@@ -425,6 +427,27 @@ class OrderStatView(APIView):
 
         return past_profit
 
+    def get_new_customers(self, shop):
+        new_customers = Customer.objects.filter(shop=shop).order_by('-id')[:5]
+        return PublicCustomerInfoSerializer(new_customers, many=True).data
+
+    def get_new_orders(self, shop):
+        new_orders = Order.objects.filter(shop=shop).order_by('-id')[:5]
+        return PublicOrderOwnerSerializer(new_orders, many=True).data
+
+    def get_top_products(self, shop):
+        top_products = Product.objects.annotate(
+            num_orders=Count('orderitem__quantity')
+        ).order_by('-num_orders')[:5]
+
+        top_products_data = []
+        for product in top_products:
+            product_object_data = PublicProductSerializer(product).data
+            product_object_data['orders'] = product.num_orders
+            top_products_data.append(product_object_data)
+
+        return top_products_data
+
     def get(self, request, shop_ref):
         if shop_ref is None:
             raise CustomException(
@@ -434,20 +457,18 @@ class OrderStatView(APIView):
 
         shop = Shop.objects.get(ref_id=shop_ref)
         all_orders = self.get_all_orders(shop)
-        all_orders_count = all_orders.count()
-        all_orders_profit = self.get_all_orders_profit(all_orders)
-
-        past_orders = self.get_past_orders(shop)
-        past_orders_profit = self.get_past_orders_profit(shop)
 
         data = {
             'success': True,
             'message': 'Orders have been been found.',
             "data": {
-                'all_orders': all_orders_count,
-                'past_orders': past_orders,
-                'total_profit': all_orders_profit,
-                'past_profit': past_orders_profit,
+                'all_orders': all_orders.count(),
+                'past_orders': self.get_past_orders(shop),
+                'total_profit': self.get_all_orders_profit(all_orders),
+                'past_profit': self.get_past_orders_profit(shop),
+                'new_customers': self.get_new_customers(shop),
+                'new_orders': self.get_new_orders(shop),
+                'top_products': self.get_top_products(shop)
             },
         }
 
