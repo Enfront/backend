@@ -1,5 +1,7 @@
 from api.settings.core import *
 
+from dotenv import load_dotenv
+
 import btcpay
 import stripe
 
