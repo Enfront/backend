@@ -67,12 +67,12 @@ class PaymentSession(TimestampedModel):
 class PaymentProvider(TimestampedModel):
     PAYPAL = 0
     STRIPE = 1
-    CRYPTO = 2
+    BITCOIN = 2
 
     PROVIDER_CHOICES = (
         (PAYPAL, 'paypal'),
         (STRIPE, 'stripe'),
-        (CRYPTO, 'crypto'),
+        (BITCOIN, 'bitcoin'),
     )
 
     INACTIVE = -1
@@ -86,6 +86,7 @@ class PaymentProvider(TimestampedModel):
     shop = models.ForeignKey(Shop, on_delete=models.CASCADE, blank=True)
     provider = models.SmallIntegerField(choices=PROVIDER_CHOICES, default=None)
     provider_data = models.JSONField(blank=True)
+    balance = models.DecimalField(blank=True, null=True, decimal_places=8, max_digits=10)
     status = models.SmallIntegerField(choices=STATUS, default=ACTIVE)
 
     class Meta:

@@ -1,6 +1,7 @@
 from django.urls import path, include
 
 urlpatterns = [
+    path('api/v1/', include('payouts.urls', namespace='payouts')),
     path('api/v1/', include('countries.urls', namespace='countries')),
     path('api/v1/', include('users.urls', namespace='users')),
     path('api/v1/', include('shops.urls', namespace='shops')),

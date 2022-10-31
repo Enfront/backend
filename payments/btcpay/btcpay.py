@@ -6,15 +6,17 @@ from rest_framework.permissions import AllowAny
 import os
 import hmac
 import hashlib
+import decimal
 import btcpay
 
-from payments.models import Payment, PaymentSession
-from payments.serializers import PaymentSerializer, PaymentSessionSerializer
+from payments.models import Payment, PaymentSession, PaymentProvider
+from payments.serializers import PaymentSessionSerializer
 from payments.views import save_payment, save_payment_session, send_virtual_product_email
 from products.views import change_stock
 from orders.models import Order
 from orders.serializers import OrderStatusSerializer
 from shared.exceptions import CustomException
+from shared.services import get_order_fees
 
 
 class PaymentCryptoView(APIView):
@@ -128,7 +130,7 @@ class PaymentCryptoIpnView(APIView):
     permission_classes = [AllowAny]
 
     def verify_webhook(self, request):
-        webhook_secret = os.environ['BTC_WEBHOOK']
+        webhook_secret = os.environ['BTC_WEBHOOK_SECRET']
         signature = request.headers['Btcpay-Sig']
 
         my_signature = hmac.new(bytearray(webhook_secret, 'utf-8'), request.body, hashlib.sha256).hexdigest()
@@ -138,6 +140,22 @@ class PaymentCryptoIpnView(APIView):
             return False
 
         return True
+
+    def increase_crypto_balance(self, invoice_id, shop):
+        payment_provider = PaymentProvider.objects.get(provider=2, status=1, shop=shop)
+        payment_methods = btcpay.Invoices.get_invoice_payment_methods(invoice_id, True)
+        customer_fees = get_order_fees(decimal.Decimal(payment_methods[0]['totalPaid']), shop.ref_id, 2, False)
+
+        if not payment_provider.balance:
+            payment_provider.balance = decimal.Decimal(payment_methods[0]['totalPaid']) - customer_fees
+        else:
+            payment_provider.balance += decimal.Decimal(payment_methods[0]['totalPaid']) - customer_fees
+
+        payment_provider.save()
+
+        enfront_account = PaymentProvider.objects.get(provider=2, status=1, shop__id=1)
+        enfront_account.balance += customer_fees
+        enfront_account.save()
 
     def post(self, request):
         is_verified = self.verify_webhook(request)
@@ -179,6 +197,7 @@ class PaymentCryptoIpnView(APIView):
                     OrderStatusSerializer.create(instance, {'order': order, 'status': 2})
 
                     save_payment(2, webhook_data, order, False)
+                    self.increase_crypto_balance(invoice['id'], order.shop)
 
                     for order_item in order.items.all():
                         change_stock(order_item.product_id, order_item.quantity, 'SUB')

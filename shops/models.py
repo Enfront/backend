@@ -3,7 +3,6 @@ from django.db import models
 from uuid import uuid4
 
 from users.models import User
-from shared.models import TimestampedModel
 from countries.models import Country
 
 

@@ -90,7 +90,7 @@ def get_total_fees(shop_ref):
     return total_fees
 
 
-def get_order_fees(order_total, shop_ref, provider):
+def get_order_fees(order_total, shop_ref, provider, round_up=True):
     try:
         shop = Shop.objects.get(ref_id=shop_ref)
     except Shop.DoesNotExist:
@@ -109,6 +109,11 @@ def get_order_fees(order_total, shop_ref, provider):
         return 0
 
     fee_percentage = get_subscription(shop_ref=shop_ref)
+
+    # we don't want to round when dealing with crypto amounts
+    if not round_up:
+        return order_total * fee_percentage['fee']
+
     return math.ceil(order_total * fee_percentage['fee'])
 
 
@@ -141,7 +146,7 @@ def send_mailgun_email(recipient, subject, body, purpose):
             }
         )
     else:
-        print(body)
+        print(subject)
 
 
 form_errors = {}

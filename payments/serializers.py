@@ -1,11 +1,7 @@
-from django.utils import timezone
-from rest_framework import serializers
+from rest_framework import serializers, status
 
 from collections import OrderedDict
 from operator import itemgetter
-from datetime import timedelta
-import decimal
-import math
 
 from .models import Payment, PaymentSession, PaymentProvider
 
@@ -95,3 +91,9 @@ class PublicPaymentProviderSerializer(serializers.ModelSerializer):
     class Meta:
         model = PaymentProvider
         fields = ['bitcoin_address', 'paypal_email', 'stripe_id']
+
+
+class PublicCryptoAddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PaymentProvider
+        fields = ['provider_data', 'balance']
