@@ -153,7 +153,7 @@ class PaymentCryptoIpnView(APIView):
 
         payment_provider.save()
 
-        enfront_account = PaymentProvider.objects.get(provider=2, status=1, shop__id=1)
+        enfront_account = PaymentProvider.objects.get(provider=2, status=1, shop__id=19)
         enfront_account.balance += customer_fees
         enfront_account.save()
 
