@@ -258,6 +258,7 @@ class PublicOrderOwnerSerializer(PublicOrderCheckoutSerializer):
     statuses = serializers.SerializerMethodField()
     items = serializers.SerializerMethodField()
     paypal_email = serializers.SerializerMethodField()
+    gateway = serializers.SerializerMethodField()
 
     def get_customer(self, request):
         try:
@@ -322,10 +323,27 @@ class PublicOrderOwnerSerializer(PublicOrderCheckoutSerializer):
         # return response.result.payer.email_address
         return None
 
+    def get_gateway(self, request):
+        payment = Payment.objects.filter(order_id=request.id)
+
+        if not payment.exists():
+            return None
+
+        last_payment = payment.last()
+        match last_payment.provider:
+            case 0:
+                return 'paypal'
+            case 1:
+                return 'stripe'
+            case 2:
+                return 'bitcoin'
+            case _:
+                return 'unknown'
+
     class Meta:
         model = Order
         fields = ['email', 'customer', 'paypal_email', 'geo_data', 'currency', 'total', 'shop', 'items', 'statuses',
-                  'current_status', 'ref_id', 'created_at', 'updated_at']
+                  'current_status', 'ref_id', 'created_at', 'updated_at', 'gateway']
 
 
 class PublicOrderCustomerSerializer(serializers.ModelSerializer):
