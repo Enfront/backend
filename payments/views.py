@@ -243,14 +243,14 @@ class PaymentProviderView(APIView):
             )
 
         try:
-            shop = Shop.objects.get(owner=request.user, ref_id=shop_ref)
+            shop = Shop.objects.get(ref_id=shop_ref)
         except Shop.DoesNotExist:
             raise CustomException(
                 'A shop with ref id ' + str(shop_ref) + ' was not found.',
                 status.HTTP_404_NOT_FOUND
             )
 
-        providers = PaymentProvider.objects.filter(shop__owner=request.user, shop=shop).exclude(status=-1)
+        providers = PaymentProvider.objects.filter(shop=shop).exclude(status=-1)
         provider_data = self.serializer_class(providers, many=True).data
 
         combined_provider_data = {}
