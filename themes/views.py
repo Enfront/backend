@@ -67,9 +67,9 @@ class ThemeView(APIView):
 class ThemeConfigurationView(APIView):
     serializer_class = ThemeConfigurationSerializer
 
-    def check_for_active_theme(self, shop_ref):
+    def check_for_active_theme(self, user, shop_ref):
         try:
-            active_theme = ThemeConfiguration.objects.get(shop__ref_id=shop_ref, status=1)
+            active_theme = ThemeConfiguration.objects.get(shop__owner=user, shop__ref_id=shop_ref, status=1)
             active_theme.status = 0
             active_theme.save()
         except ThemeConfiguration.DoesNotExist:
@@ -88,7 +88,9 @@ class ThemeConfigurationView(APIView):
             )
 
         try:
-            theme_config = ThemeConfiguration.objects.get(theme__ref_id=theme_ref, shop__ref_id=shop_ref)
+            theme_config = ThemeConfiguration.objects.get(
+                shop__owner=request.user, theme__ref_id=theme_ref, shop__ref_id=shop_ref
+            )
 
             if theme_config.config_status == 1:
                 save_path = os.path.join('themes', 'configurations', theme_config.file_name)
@@ -145,9 +147,10 @@ class ThemeConfigurationView(APIView):
 
             return Response(data, status=status.HTTP_400_BAD_REQUEST)
 
-        self.check_for_active_theme(config_data.get('shop'))
+        self.check_for_active_theme(request.user, config_data.get('shop'))
 
         existing_config = ThemeConfiguration.objects.filter(
+            shop__owner=request.user,
             shop__ref_id=config_data.get('shop'),
             theme__ref_id=config_data.get('theme'),
         ).first()

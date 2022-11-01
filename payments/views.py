@@ -197,8 +197,8 @@ class PaymentProviderView(APIView):
     permission_classes = [AllowAny]
     serializer_class = PublicPaymentProviderSerializer
 
-    def start_stripe_onboarding(self, shop):
-        onboarded_data = PaymentProvider.objects.filter(shop=shop.id, provider=1).last()
+    def start_stripe_onboarding(self, user, shop):
+        onboarded_data = PaymentProvider.objects.filter(shop__owner=user, shop=shop.id, provider=1).last()
 
         if onboarded_data:
             stripe_account_id = onboarded_data.provider_data['id']
@@ -243,14 +243,14 @@ class PaymentProviderView(APIView):
             )
 
         try:
-            shop = Shop.objects.get(ref_id=shop_ref)
+            shop = Shop.objects.get(owner=request.user, ref_id=shop_ref)
         except Shop.DoesNotExist:
             raise CustomException(
                 'A shop with ref id ' + str(shop_ref) + ' was not found.',
                 status.HTTP_404_NOT_FOUND
             )
 
-        providers = PaymentProvider.objects.filter(shop=shop).exclude(status=-1)
+        providers = PaymentProvider.objects.filter(shop__owner=request.user, shop=shop).exclude(status=-1)
         provider_data = self.serializer_class(providers, many=True).data
 
         combined_provider_data = {}
@@ -276,7 +276,7 @@ class PaymentProviderView(APIView):
             )
 
         try:
-            shop = Shop.objects.get(ref_id=shop_ref)
+            shop = Shop.objects.get(shop__owner=request.user, ref_id=shop_ref)
         except Shop.DoesNotExist:
             raise CustomException(
                 'A shop with ref id ' + str(shop_ref) + ' was not found.',
@@ -285,7 +285,7 @@ class PaymentProviderView(APIView):
 
         for key in provider_data:
             if key == 'stripe':
-                account_link = self.start_stripe_onboarding(shop)
+                account_link = self.start_stripe_onboarding(request.user, shop)
             else:
                 PaymentProvider.objects.update_or_create(
                     shop_id=shop.id,
@@ -318,7 +318,11 @@ class PaymentProviderView(APIView):
             )
 
         try:
-            provider = PaymentProvider.objects.get(shop__ref_id=shop_ref, provider=provider_data.get('provider'))
+            provider = PaymentProvider.objects.get(
+                shop__owner=request.user,
+                shop__ref_id=shop_ref,
+                provider=provider_data.get("provider"),
+            )
             provider.status = -1
             provider.save()
         except PaymentProvider.DoesNotExist:

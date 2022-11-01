@@ -43,7 +43,7 @@ class BlacklistView(APIView):
                 status.HTTP_422_UNPROCESSABLE_ENTITY
             )
 
-        blacklist = Blacklist.objects.filter(shop_id__ref_id=shop_ref)
+        blacklist = Blacklist.objects.filter(shop__owner=request.user, shop_id__ref_id=shop_ref)
         blacklist_data = PublicBlacklistSerializer(blacklist, many=True).data
 
         data = {
@@ -62,7 +62,7 @@ class BlacklistView(APIView):
             )
 
         try:
-            blacklist = Blacklist.objects.get(ref_id=ref_id)
+            blacklist = Blacklist.objects.get(shop__owner=request.user, ref_id=ref_id)
             blacklist.delete()
         except Blacklist.DoesNotExist:
             raise CustomException(

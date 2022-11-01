@@ -33,7 +33,7 @@ class ShopView(APIView):
     def get(self, request, ref_id=None):
         if ref_id is not None:
             try:
-                shop = Shop.objects.exclude(status=-1).get(ref_id=ref_id)
+                shop = Shop.objects.exclude(status=-1).get(owner=request.user, ref_id=ref_id)
                 shop_data = PublicShopSerializer(shop).data
             except Shop.DoesNotExist:
                 raise CustomException(
@@ -41,7 +41,7 @@ class ShopView(APIView):
                     status.HTTP_404_NOT_FOUND,
                 )
         else:
-            shop = Shop.objects.filter(owner=request.user.pk).exclude(status=-1)
+            shop = Shop.objects.filter(owner=request.user).exclude(status=-1)
             shop_data = PublicShopSerializer(shop, many=True).data
 
             if not shop:
@@ -142,7 +142,7 @@ class ShopView(APIView):
             )
 
         try:
-            shop = Shop.objects.get(ref_id=ref_id)
+            shop = Shop.objects.get(owner=request.user, ref_id=ref_id)
         except Shop.DoesNotExist:
             raise CustomException(
                 'A shop with the ref id ' + str(ref_id) + ' could not be found.',
@@ -184,7 +184,7 @@ class ShopView(APIView):
             )
 
         try:
-            shop = Shop.objects.get(ref_id=ref_id)
+            shop = Shop.objects.get(owner=request.user, ref_id=ref_id)
             shop.status = -1
             shop.save()
         except Shop.DoesNotExist:

@@ -33,8 +33,8 @@ class PayoutView(APIView, PaginationMixin):
 
         return status_code
 
-    def check_pending_payouts(self, shop_ref):
-        pending_payouts = Payout.objects.filter(Q(status=0) | Q(status=1), shop__ref_id=shop_ref)
+    def check_pending_payouts(self, user, shop_ref):
+        pending_payouts = Payout.objects.filter(Q(status=0) | Q(status=1), shop__ref_id=shop_ref, shop__owner=user)
 
         if pending_payouts.exists():
             for payout in pending_payouts:
@@ -49,21 +49,23 @@ class PayoutView(APIView, PaginationMixin):
     def get(self, request, shop_ref):
         payout_return_data = {}
 
-        self.check_pending_payouts(shop_ref)
+        self.check_pending_payouts(request.user, shop_ref)
 
-        payouts = Payout.objects.filter(shop__ref_id=shop_ref).order_by('-created_at')
+        payouts = Payout.objects.filter(shop__owner=request.user, shop__ref_id=shop_ref).order_by('-created_at')
         if payouts.exists():
             page = self.paginate_queryset(payouts)
             payouts_data = PublicPayoutSerializer(page, many=True).data
             payouts_paginated = self.get_paginated_response(payouts_data).data
             payout_return_data['history'] = payouts_paginated
 
-        crypto_addresses = PaymentProvider.objects.filter(shop__ref_id=shop_ref, provider=2, status=1).last()
+        crypto_addresses = PaymentProvider.objects.filter(
+            shop__owner=request.user, shop__ref_id=shop_ref, provider=2, status=1
+        ).last()
+
         if crypto_addresses:
             crypto_addresses_data = PublicCryptoAddressSerializer(crypto_addresses).data
 
             payout_return_data['balance'] = crypto_addresses_data['balance']
-            payout_return_data['bitcoin_address'] = crypto_addresses_data['provider_data']['bitcoin_address']
 
         data = {
             'success': True,

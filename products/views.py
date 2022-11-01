@@ -116,7 +116,12 @@ class ProductView(APIView):
 
         if shop_ref is not None:
             try:
-                products = Product.objects.filter(shop__ref_id=shop_ref).exclude(status=-1).order_by('name')
+                products = (
+                    Product.objects.filter(shop__ref_id=shop_ref, shop__owner=request.user)
+                    .exclude(status=-1)
+                    .order_by("name")
+                )
+
                 is_many = True
             except Product.DoesNotExist:
                 raise CustomException(
@@ -126,7 +131,7 @@ class ProductView(APIView):
 
         elif product_ref is not None:
             try:
-                products = Product.objects.exclude(status=-1).get(ref_id=product_ref)
+                products = Product.objects.exclude(status=-1).get(ref_id=product_ref, shop__owner=request.user)
             except Product.DoesNotExist:
                 raise CustomException(
                     'A product with id ' + str(product_ref) + ' was not found.',
@@ -239,7 +244,7 @@ class ProductView(APIView):
             )
 
         try:
-            product_to_update = Product.objects.get(ref_id=product_ref)
+            product_to_update = Product.objects.get(ref_id=product_ref, shop__owner=request.user)
             product = serialized_data.update(product_to_update, serialized_data.data)
         except Product.DoesNotExist:
             raise CustomException(
@@ -275,7 +280,7 @@ class ProductView(APIView):
 
         if product_ref is not None:
             try:
-                product = Product.objects.get(ref_id=product_ref)
+                product = Product.objects.get(ref_id=product_ref, shop__owner=request.user)
                 product.status = -1
                 product.save()
             except Product.DoesNotExist:
@@ -289,9 +294,10 @@ class ProductView(APIView):
                 'message': 'A product with id ' + str(product_ref) + ' was deleted.',
                 'data': {},
             }
+
         if digital_ref is not None:
             try:
-                key = DigitalProduct.objects.get(ref_id=digital_ref)
+                key = DigitalProduct.objects.get(ref_id=digital_ref, shop__owner=request.user)
                 key.status = -1
                 key.save()
 

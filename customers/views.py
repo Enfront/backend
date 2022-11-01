@@ -32,8 +32,11 @@ class CustomerView(APIView, PaginationMixin):
             seach_query = request.query_params.get('q')
 
             if seach_query:
-                customers = Customer.objects.filter(shop__ref_id=shop_ref, user__email__contains=seach_query)\
-                    .order_by('-user__created_at')
+                customers = (
+                    Customer.objects.filter(
+                        shop__owner=request.user, shop__ref_id=shop_ref,user__email__contains=seach_query
+                    ).order_by('-user__created_at')
+                )
 
                 if not customers:
                     data = {
@@ -46,7 +49,9 @@ class CustomerView(APIView, PaginationMixin):
 
                     return Response(data, status=status.HTTP_200_OK)
             else:
-                customers = Customer.objects.filter(shop__ref_id=shop_ref).order_by('-user__created_at')
+                customers = Customer.objects.filter(
+                    shop__owner=request.user, shop__ref_id=shop_ref
+                ).order_by("-user__created_at")
 
             page = self.paginate_queryset(customers)
             if page is not None:
@@ -63,7 +68,7 @@ class CustomerView(APIView, PaginationMixin):
 
         if shop_ref is not None and customer_ref is not None:
             try:
-                customer = Customer.objects.get(user__ref_id=customer_ref)
+                customer = Customer.objects.get(shop__owner=request.user, user__ref_id=customer_ref)
                 customer_data = PublicCustomerExpandedSerializer(customer).data
 
                 page = self.paginate_queryset(customer_data['orders'])
@@ -109,7 +114,9 @@ class CustomerView(APIView, PaginationMixin):
             )
 
         try:
-            customer_to_update = User.objects.get(ref_id=customer_data.get('customer'))
+            customer_to_update = User.objects.get(
+                customer__shop__owner=request.user, ref_id=customer_data.get("customer")
+            )
 
             if customer_to_update.email != customer_data.get('email'):
                 email_exists = self.check_for_existing_user(
@@ -152,7 +159,9 @@ class CustomerNotesView(APIView):
                 status.HTTP_422_UNPROCESSABLE_ENTITY
             )
 
-        notes = CustomerNote.objects.filter(customer__user__ref_id=customer_ref, status=0)
+        notes = CustomerNote.objects.filter(
+            customer__shop__owner=request.user, customer__user__ref_id=customer_ref, status=0
+        )
 
         if notes.count() == 0:
             data = {

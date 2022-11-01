@@ -61,7 +61,11 @@ class OrderView(APIView, PaginationMixin):
         return SoftwareDetector(user_agent).parse()
 
     def check_order_expiration(self, order):
-        if order.current_status == 0 and order.expires_at < timezone.now():
+        if (order.current_status == -2
+            and order.expires_at < timezone.now()
+            or order.current_status == 0
+            and order.expires_at < timezone.now()
+        ):
             instance = OrderStatusSerializer()
             OrderStatusSerializer.create(instance, {'order': order, 'status': -1})
 
@@ -94,8 +98,11 @@ class OrderView(APIView, PaginationMixin):
 
             send_mailgun_email(order.email, email_subject, email_body, 'order')
 
-    def check_seach_query(self, shop_ref, query):
-        order = Order.objects.filter(shop_id__ref_id=shop_ref, email__contains=query).order_by('-created_at')
+    def check_seach_query(self, requester, shop_ref, query):
+        order = (
+            Order.objects.filter(shop__owner=requester.user, shop_id__ref_id=shop_ref, email__contains=query)
+            .order_by('-created_at')
+        )
 
         if not order:
             data = {
@@ -134,12 +141,15 @@ class OrderView(APIView, PaginationMixin):
 
         if order_ref is not None:
             try:
-                order = Order.objects.get(ref_id=order_ref)
-                self.check_order_expiration(order)
-
                 if 'checkout' in request.path:
+                    order = Order.objects.get(ref_id=order_ref)
+                    self.check_order_expiration(order)
+
                     orders = PublicOrderCheckoutSerializer(order).data
                 else:
+                    order = Order.objects.get(ref_id=order_ref, shop__owner=request.user)
+                    self.check_order_expiration(order)
+
                     orders = PublicOrderOwnerSerializer(order, context=context).data
             except Order.DoesNotExist:
                 raise CustomException(
@@ -150,9 +160,13 @@ class OrderView(APIView, PaginationMixin):
         elif shop_ref is not None:
             seach_query = request.query_params.get('q')
             if seach_query:
-                order = self.check_seach_query(shop_ref, seach_query)
+                order = self.check_seach_query(request.user, shop_ref, seach_query)
             else:
-                order = Order.objects.filter(shop_id__ref_id=shop_ref).exclude(email=None).order_by('-created_at')
+                order = (
+                    Order.objects.filter(shop_id__ref_id=shop_ref, shop__owner=request.user)
+                    .exclude(email=None)
+                    .order_by('-created_at')
+                )
 
             if not order:
                 raise CustomException(
