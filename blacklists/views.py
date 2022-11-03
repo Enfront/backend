@@ -6,10 +6,40 @@ from .models import Blacklist
 from .serializers import PublicBlacklistSerializer, BlacklistSerializer
 
 from shared.exceptions import CustomException
+from shared.pagination import PaginationMixin, CustomPagination
 
 
-class BlacklistView(APIView):
+class BlacklistView(APIView, PaginationMixin):
+    pagination_class = CustomPagination
     serializer_class = BlacklistSerializer
+
+    def get(self, request, shop_ref):
+        if shop_ref is None:
+            raise CustomException(
+                'Shop ref id is required.',
+                status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+
+        blacklist = Blacklist.objects.filter(shop__owner=request.user, shop_id__ref_id=shop_ref)
+        blacklist_paginated = None
+
+        if blacklist.exists():
+            page = self.paginate_queryset(blacklist)
+
+            print(page)
+            if page is not None:
+                blacklist_data = PublicBlacklistSerializer(page, many=True).data
+                blacklist_paginated = self.get_paginated_response(blacklist_data).data
+            else:
+                blacklist_paginated = PublicBlacklistSerializer(blacklist, many=True).data
+
+        data = {
+            'success': True,
+            'message': 'Blacklist item(s) that match your criteria were found.',
+            'data': blacklist_paginated
+        }
+
+        return Response(data, status=status.HTTP_200_OK)
 
     def post(self, request):
         blacklist_data = request.data
@@ -32,24 +62,6 @@ class BlacklistView(APIView):
             'data': {
                 'ref_id': blacklist_ref_id
             }
-        }
-
-        return Response(data, status=status.HTTP_200_OK)
-
-    def get(self, request, shop_ref):
-        if shop_ref is None:
-            raise CustomException(
-                'Shop ref id is required.',
-                status.HTTP_422_UNPROCESSABLE_ENTITY
-            )
-
-        blacklist = Blacklist.objects.filter(shop__owner=request.user, shop_id__ref_id=shop_ref)
-        blacklist_data = PublicBlacklistSerializer(blacklist, many=True).data
-
-        data = {
-            'success': True,
-            'message': 'Blacklist item(s) that match your criteria were found.',
-            'data': blacklist_data
         }
 
         return Response(data, status=status.HTTP_200_OK)
