@@ -25,8 +25,6 @@ class BlacklistView(APIView, PaginationMixin):
 
         if blacklist.exists():
             page = self.paginate_queryset(blacklist)
-
-            print(page)
             if page is not None:
                 blacklist_data = PublicBlacklistSerializer(page, many=True).data
                 blacklist_paginated = self.get_paginated_response(blacklist_data).data
