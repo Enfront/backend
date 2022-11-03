@@ -297,7 +297,7 @@ class ProductView(APIView):
 
         if digital_ref is not None:
             try:
-                key = DigitalProduct.objects.get(ref_id=digital_ref, shop__owner=request.user)
+                key = DigitalProduct.objects.get(ref_id=digital_ref, product__shop__owner=request.user)
                 key.status = -1
                 key.save()
 
