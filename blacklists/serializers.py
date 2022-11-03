@@ -33,14 +33,24 @@ class BlacklistSerializer(serializers.ModelSerializer):
         shop = self.get_shop(validated_data['shop'])
 
         if validated_data['ip_address'] is not None:
-            blacklist_item = Blacklist.objects.create(ip_address=validated_data['ip_address'], shop=shop)
+            blacklist_item = Blacklist.objects.create(
+                ip_address=validated_data['ip_address'], shop=shop, note=validated_data['note']
+            )
         elif validated_data['country'] is not None:
-            blacklist_item = Blacklist.objects.create(country=validated_data['country'], shop=shop)
+            blacklist_item = Blacklist.objects.create(
+                country=validated_data['country'], shop=shop, note=validated_data['note']
+            )
         elif validated_data['paypal_email'] is not None:
-            blacklist_item = Blacklist.objects.create(paypal_email=validated_data['paypal_email'], shop=shop)
+            blacklist_item = Blacklist.objects.create(
+                paypal_email=validated_data['paypal_email'],
+                shop=shop,
+                note=validated_data['note'],
+            )
         else:
             user = self.get_user(validated_data['user'])
-            blacklist_item = Blacklist.objects.create(user=user, shop=shop)
+            blacklist_item = Blacklist.objects.create(
+                user=user, shop=shop, note=validated_data['note']
+            )
 
         return blacklist_item.ref_id
 
@@ -60,4 +70,4 @@ class PublicBlacklistSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Blacklist
-        fields = ['email', 'ip_address', 'paypal_email', 'country', 'ref_id']
+        fields = ['email', 'ip_address', 'paypal_email', 'country', 'note', 'created_at', 'ref_id']
