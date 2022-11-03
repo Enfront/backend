@@ -11,9 +11,6 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
-from captcha.fields import ReCaptchaField
-from captcha.widgets import ReCaptchaV3
-
 import os
 
 from .models import User
@@ -21,6 +18,7 @@ from .serializers import RegisterUserSerializer, PublicUserInfoSerializer, UserS
 from .tokens import account_activation_token, forgot_password_token
 
 from shared.exceptions import CustomException
+from shared.recaptcha_validation import RecaptchaValidation
 from shared.services import send_mailgun_email, create_form_errors, get_url
 from shops.models import Shop
 
@@ -103,7 +101,7 @@ class RegisterUserView(APIView):
         serialized_data = self.serializer_class(data=register_data, context=context)
 
         is_valid = serialized_data.is_valid(raise_exception=False)
-        is_captcha_valid = ReCaptchaField(widget=ReCaptchaV3)
+        is_captcha_valid = RecaptchaValidation(register_data['recaptcha'])
 
         if not is_valid or not is_captcha_valid:
             if not is_dashboard:
@@ -193,7 +191,7 @@ class ForgotPasswordView(APIView):
                 status.HTTP_422_UNPROCESSABLE_ENTITY
             )
 
-        is_captcha_valid = ReCaptchaField(widget=ReCaptchaV3)
+        is_captcha_valid = RecaptchaValidation(forgot_data['recaptcha'])
         if not is_captcha_valid:
             if not is_dashboard:
                 create_form_errors(
@@ -454,7 +452,7 @@ class LoginUserView(APIView):
                 status.HTTP_422_UNPROCESSABLE_ENTITY
             )
 
-        is_captcha_valid = ReCaptchaField(widget=ReCaptchaV3)
+        is_captcha_valid = RecaptchaValidation(auth_data['recaptcha'])
         if not is_captcha_valid:
             if not is_dashboard:
                 create_form_errors(
