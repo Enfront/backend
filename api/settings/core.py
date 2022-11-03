@@ -74,7 +74,6 @@ INSTALLED_APPS = [
     'payouts',
 
     # Third party
-    'captcha',
     'polymorphic',
     'corsheaders',
     'rest_framework',
