@@ -254,7 +254,7 @@ class ThemeTemplateView(APIView):
     def get_header_content(self, is_editor):
         editor_file = open('templates/editor.html', 'r')
 
-        if is_editor is not None:
+        if is_editor is None:
             recaptcha_file = open('templates/recaptcha.html', 'r')
 
             return editor_file.read() + recaptcha_file.read()
