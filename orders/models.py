@@ -72,7 +72,7 @@ class Order(TimestampedModel):
     email_sent = models.BooleanField(default=False, blank=True)
     ref_id = models.UUIDField(default=uuid4, editable=False, unique=True)
     expires_at = models.DateTimeField(default=get_order_expire_date)
-    total = models.BigIntegerField(blank=True)
+    total = models.BigIntegerField(blank=True, validators=[MinValueValidator(50), MaxValueValidator(1000000)])
     current_status = models.SmallIntegerField(
         choices=STATUS_CHOICES,
         default=WAITING_FOR_PAYMENT,

@@ -201,25 +201,16 @@ class OrderView(APIView, PaginationMixin):
         cart = get_users_cart(cart_cookie)
 
         if cart is None:
-            raise CustomException(
-                'Cart with ID ' + str(cart_cookie) + ' could not be found.',
-                status.HTTP_404_NOT_FOUND
-            )
+            return HttpResponseRedirect(get_url('/404'))
 
         cart_items = get_users_cart_items(cart)
 
         for item in cart_items:
             if item['quantity'] < item['min_order_quantity'] or item['quantity'] > item['max_order_quantity']:
-                raise CustomException(
-                    'Quantity must be between ' + item['min_order_quantity'] + ' and ' + item['max_order_quantity'],
-                    status.HTTP_409_CONFLICT
-                )
+                return HttpResponseRedirect(get_url('/404'))
 
             if item['stock'] < item['quantity']:
-                raise CustomException(
-                    'The quantity of ' + item['name'] + ' exceeds stock levels.',
-                    status.HTTP_409_CONFLICT
-                )
+                return HttpResponseRedirect(get_url('/404'))
 
         context = {
             'request': request,
@@ -230,13 +221,10 @@ class OrderView(APIView, PaginationMixin):
         }
 
         serialized_data = self.serializer_class(data=order_data, context=context)
-        is_valid = serialized_data.is_valid(raise_exception=True)
+        is_valid = serialized_data.is_valid(raise_exception=False)
 
-        if not is_valid:
-            raise CustomException(
-                'There was a problem creating an order.',
-                status.HTTP_400_BAD_REQUEST
-            )
+        if not is_valid or serialized_data.data['total'] < decimal.Decimal(0.50):
+            return HttpResponseRedirect(get_url('/404'))
 
         client_ip = get_client_ip(request)
         geo_data = self.get_geo_location(client_ip[0])
@@ -266,10 +254,7 @@ class OrderView(APIView, PaginationMixin):
         is_valid = serialized_data.is_valid(raise_exception=True)
 
         if not is_valid:
-            raise CustomException(
-                'There was a problem saving the user.',
-                status.HTTP_400_BAD_REQUEST
-            )
+            return HttpResponseRedirect(get_url('/404'))
 
         serialized_data.create(serialized_data.data)
 
