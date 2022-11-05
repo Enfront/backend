@@ -60,18 +60,17 @@ class OrderView(APIView, PaginationMixin):
     def get_software_info(self, user_agent):
         return SoftwareDetector(user_agent).parse()
 
-    def check_order_expiration(self, order):
-        if (order.current_status == -2
-            and order.expires_at < timezone.now()
-            or order.current_status == 0
-            and order.expires_at < timezone.now()
-        ):
-            instance = OrderStatusSerializer()
-            OrderStatusSerializer.create(instance, {'order': order, 'status': -1})
+    def check_order_expiration(self):
+        orders = Order.objects.filter(Q(current_status=-2) | Q(current_status=0), expires_at__lt=timezone.now())
 
-            for order_item in order.items.all():
-                item_instance = OrderItemStatusSerializer()
-                OrderItemStatusSerializer.create(item_instance, {'item': order_item, 'status': -1})
+        if orders.exists():
+            for order in orders:
+                instance = OrderStatusSerializer()
+                OrderStatusSerializer.create(instance, {'order': order, 'status': -1})
+
+                for order_item in order.items.all():
+                    item_instance = OrderItemStatusSerializer()
+                    OrderItemStatusSerializer.create(item_instance, {'item': order_item, 'status': -1})
 
     def send_order_email(self, order):
         if not order.email_sent:
@@ -139,17 +138,15 @@ class OrderView(APIView, PaginationMixin):
         paypal_client = PayPalClient()
         context = {'paypal_client': paypal_client}
 
+        self.check_order_expiration()
+
         if order_ref is not None:
             try:
                 if 'checkout' in request.path:
                     order = Order.objects.get(ref_id=order_ref)
-                    self.check_order_expiration(order)
-
                     orders = PublicOrderCheckoutSerializer(order).data
                 else:
                     order = Order.objects.get(ref_id=order_ref, shop__owner=request.user)
-                    self.check_order_expiration(order)
-
                     orders = PublicOrderOwnerSerializer(order, context=context).data
             except Order.DoesNotExist:
                 raise CustomException(
@@ -174,11 +171,7 @@ class OrderView(APIView, PaginationMixin):
                     status.HTTP_204_NO_CONTENT,
                 )
 
-            for single_order in order:
-                self.check_order_expiration(single_order)
-
             page = self.paginate_queryset(order)
-
             if page is not None:
                 orders_data = PublicOrderOwnerSerializer(page, context=context, many=True).data
                 orders = self.get_paginated_response(orders_data).data
