@@ -324,7 +324,7 @@ class PublicOrderOwnerSerializer(PublicOrderCheckoutSerializer):
         return None
 
     def get_gateway(self, request):
-        payment = Payment.objects.filter(order_id=request.id)
+        payment = Payment.objects.filter(order_id=request.id, canceled_at=None)
 
         if not payment.exists():
             return None
