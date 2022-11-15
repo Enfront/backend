@@ -72,6 +72,7 @@ INSTALLED_APPS = [
     'customers',
     'countries',
     'payouts',
+    'groups',
 
     # Third party
     'polymorphic',

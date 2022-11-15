@@ -17,6 +17,7 @@ import botocore
 import json
 import html
 
+from groups.models import Collection
 from .models import Theme, ThemeConfiguration
 from .serializers import PublicThemeSerializer, ThemeConfigurationSerializer
 
@@ -101,7 +102,8 @@ class ThemeConfigurationView(APIView):
                 json_content = json.loads(contents)
             else:
                 json_content = None
-        except Theme.DoesNotExist:
+        except ThemeConfiguration.DoesNotExist:
+            # TODO: Maybe replace with creation of config file
             raise CustomException(
                 'A theme configuration was not found for shop ' + str(shop_ref) + '.',
                 status.HTTP_204_NO_CONTENT
@@ -261,10 +263,18 @@ class ThemeTemplateView(APIView):
 
         return editor_file.read()
 
-    def get_products(self, shop_ref):
-        products = Product.objects.filter(shop__ref_id=shop_ref, status=1).order_by('name')
-        products_data = PublicProductSerializer(products, many=True).data
+    def get_products(self, shop_ref, collection_slug=None):
+        if collection_slug is not None:
+            try:
+                collection = Collection.objects.get(slug=collection_slug)
+            except Collection.DoesNotExist:
+                return []
 
+            products = collection.products.all()
+        else:
+            products = Product.objects.filter(shop__ref_id=shop_ref, status=1).order_by('name')
+
+        products_data = PublicProductSerializer(products, many=True).data
         return products_data
 
     def get_product(self, shop_ref, item_slug, cart=None):
@@ -428,7 +438,7 @@ class ThemeTemplateView(APIView):
             'csrf_token': get_token(request),
             'currency': get_currency_symbol(shop.currency),
             'product': self.get_product(shop.ref_id, item_slug, cart),
-            'products': self.get_products(shop.ref_id),
+            'products': self.get_products(shop.ref_id, item_slug),
             'required_header_content': self.get_header_content(request.query_params.get('editor')),
             'shop_ref': shop.ref_id,
             'shop_name': shop.name,

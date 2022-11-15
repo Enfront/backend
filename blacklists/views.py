@@ -21,15 +21,21 @@ class BlacklistView(APIView, PaginationMixin):
             )
 
         blacklist = Blacklist.objects.filter(shop__owner=request.user, shop_id__ref_id=shop_ref)
-        blacklist_paginated = None
+        if not blacklist.exists():
+            data = {
+                'success': True,
+                'message': 'Blacklist item(s) that match your criteria could not be found.',
+                'data': {}
+            }
 
-        if blacklist.exists():
-            page = self.paginate_queryset(blacklist)
-            if page is not None:
-                blacklist_data = PublicBlacklistSerializer(page, many=True).data
-                blacklist_paginated = self.get_paginated_response(blacklist_data).data
-            else:
-                blacklist_paginated = PublicBlacklistSerializer(blacklist, many=True).data
+            return Response(data, status=status.HTTP_204_NO_CONTENT)
+
+        page = self.paginate_queryset(blacklist)
+        if page is not None:
+            blacklist_data = PublicBlacklistSerializer(page, many=True).data
+            blacklist_paginated = self.get_paginated_response(blacklist_data).data
+        else:
+            blacklist_paginated = PublicBlacklistSerializer(blacklist, many=True).data
 
         data = {
             'success': True,
