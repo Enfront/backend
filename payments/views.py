@@ -276,7 +276,7 @@ class PaymentProviderView(APIView):
             )
 
         try:
-            shop = Shop.objects.get(shop__owner=request.user, ref_id=shop_ref)
+            shop = Shop.objects.get(owner=request.user, ref_id=shop_ref)
         except Shop.DoesNotExist:
             raise CustomException(
                 'A shop with ref id ' + str(shop_ref) + ' was not found.',
