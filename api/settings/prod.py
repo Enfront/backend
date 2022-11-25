@@ -1,7 +1,9 @@
 from api.settings.core import *
 
 from dotenv import load_dotenv
+from sentry_sdk.integrations.django import DjangoIntegration
 
+import sentry_sdk
 import btcpay
 import stripe
 
@@ -99,3 +101,14 @@ btcpay.store_id = os.environ['BTC_STORE_ID']
 # Stripe
 # https://pypi.org/project/stripe/
 stripe.api_key = os.environ['STRIPE_KEY']
+
+# Sentry
+# https://sentry.io/
+sentry_sdk.init(
+    dsn="https://ea771e4edc184cdeb2ec331994ec6c63@o4504220808380416.ingest.sentry.io/4504220992208896",
+    integrations=[
+        DjangoIntegration(),
+    ],
+    traces_sample_rate=0.2,
+    send_default_pii=True
+)
