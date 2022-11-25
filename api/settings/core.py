@@ -27,6 +27,7 @@ CSP_STYLE_SRC = [
     'https://jkpay.s3.us-east-2.amazonaws.com',
     'https://css.gg',
     'https://unpkg.com',
+    'https://cdn.jsdelivr.net',
     "'unsafe-inline'"
 ]
 
@@ -35,7 +36,8 @@ CSP_SCRIPT_SRC = [
     'https://fonts.googleapis.com',
     'https://jkpay.s3.us-east-2.amazonaws.com',
     'https://www.recaptcha.net',
-    'https://www.gstatic.com/recaptcha/'
+    'https://www.gstatic.com/recaptcha/',
+    'https://cdn.jsdelivr.net'
 ]
 
 CSP_FONT_SRC = [

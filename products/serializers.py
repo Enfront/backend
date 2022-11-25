@@ -65,7 +65,7 @@ class PublicProductSerializer(serializers.ModelSerializer):
         return request.price
 
     def get_available(self, request):
-        if request.stock == 0 and request.status <= 0:
+        if request.stock == 0 or request.status <= 0:
             return False
 
         return True
@@ -79,7 +79,7 @@ class PublicProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ['name', 'description', 'price', 'slug', 'images', 'available', 'min_order_quantity',
-                  'max_order_quantity', 'ref_id']
+                  'max_order_quantity', 'ref_id', 'stock']
 
 
 class PublicProductOwnerSerializer(serializers.ModelSerializer):

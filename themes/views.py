@@ -1,7 +1,9 @@
+import botocore
 from django.utils.text import slugify
 from django.middleware.csrf import get_token
 from django.http import HttpResponse, HttpResponseRedirect
 from django.db.models import Q
+from django.conf import settings
 
 from rest_framework import status
 from rest_framework.views import APIView
@@ -9,19 +11,27 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 
 from uuid import uuid4
+from liquid import Environment
+from liquid_extra import filters
 from babel.numbers import get_currency_symbol
 
 import os
 import boto3
-import botocore
 import json
 import html
 
-from groups.models import Collection
+from .loaders.loader import CustomFileSystemLoader, FragmentTag
 from .models import Theme, ThemeConfiguration
 from .serializers import PublicThemeSerializer, ThemeConfigurationSerializer
+from .filters.cdn_url import cdn_url
+from .filters.collection_url import collection_url
+from .filters.media_url import media_url
+from .filters.money import money
+from .filters.product_url import product_url
+from .filters.script_url import script_url
+from .filters.style_url import style_url
+from .tags.form_tag import FormTag
 
-from api.jinja2 import environment
 from shops.models import Shop
 from shops.serializers import PublicShopSerializer
 from products.models import Product
@@ -31,6 +41,8 @@ from customers.serializers import PublicCustomerInfoSerializer
 from shared.exceptions import CustomException
 from shared.services import get_form_errors, reset_form_errors, get_url
 from carts.views import get_users_cart, get_users_cart_items, get_cart_total
+from groups.models import Collection
+from groups.serializers import PublicCollectionSerializer
 
 
 class ThemeView(APIView):
@@ -216,43 +228,6 @@ class ThemeSettingsView(APIView):
 class ThemeTemplateView(APIView):
     permission_classes = [AllowAny]
 
-    def money(self, data, currency):
-        if not currency:
-            return 'No currency provided'
-
-        return currency + str(format(data / 100, '.02f'))
-
-    def product_url(self, product_name):
-        if not product_name:
-            return None
-
-        return '/product/' + slugify(product_name)
-
-    def media_url(self, data):
-        if isinstance(data, str):
-            return 'https://jkpay.s3.us-east-2.amazonaws.com' + data
-
-        if not data or not data.get('path'):
-            return None
-
-        return 'https://jkpay.s3.us-east-2.amazonaws.com' + data.get('path')
-
-    def asset_url(self, asset_name, theme_ref=None, official=None):
-        try:
-            theme = Theme.objects.get(ref_id=theme_ref)
-        except Theme.DoesNotExist:
-            return HttpResponseRedirect(get_url('/404'))
-
-        theme_template_path = os.path.join(
-            'themes',
-            'templates',
-            ('official' if official is not None else ''),
-            slugify(theme.name),
-            'assets'
-        )
-
-        return 'https://jkpay.s3.us-east-2.amazonaws.com/' + theme_template_path + '/' + asset_name
-
     def get_header_content(self, is_editor):
         editor_file = open('templates/editor.html', 'r')
 
@@ -262,6 +237,11 @@ class ThemeTemplateView(APIView):
             return editor_file.read() + recaptcha_file.read()
 
         return editor_file.read()
+
+    def get_collections(self, shop_ref):
+        collections = Collection.objects.filter(shop__ref_id=shop_ref)
+        collections_data = PublicCollectionSerializer(collections, many=True).data
+        return collections_data
 
     def get_products(self, shop_ref, collection_slug=None):
         if collection_slug is not None:
@@ -293,7 +273,7 @@ class ThemeTemplateView(APIView):
                     'in reprehenderit in voluptate velit esse cillum dolore eu fugiat '
                     'nulla pariatur. Excepteur sint occaecat cupidatat non proident, '
                     'sunt in culpa qui officia deserunt mollit anim id est laborum.',
-                'price': 250.00,
+                'price': '250',
                 'shop_id': str(shop_ref),
                 'images': [{'id': 3, 'path': '/media/items/0b5458bc-5c33-45f5-85c7-74b229c820c9.jpeg'}],
                 'min_order_quantity': 1,
@@ -366,15 +346,19 @@ class ThemeTemplateView(APIView):
 
         return all_cart
 
-    def get_custom_filters(self):
-        jinja_environment = environment()
-        jinja_environment.filters['slugify'] = slugify
-        jinja_environment.filters['product_url'] = self.product_url
-        jinja_environment.filters['asset_url'] = self.asset_url
-        jinja_environment.filters['media_url'] = self.media_url
-        jinja_environment.filters['money'] = self.money
+    def get_custom_filters(self, liquid_env):
+        liquid_env.add_filter('cdn_url', cdn_url)
+        liquid_env.add_filter('collection_url', collection_url)
+        liquid_env.add_filter('media_url', media_url)
+        liquid_env.add_filter('money', money)
+        liquid_env.add_filter('product_url', product_url)
+        liquid_env.add_filter('script_tag', filters.script_tag)
+        liquid_env.add_filter('script_url', script_url)
+        liquid_env.add_filter('slugify', slugify)
+        liquid_env.add_filter('style_url', style_url)
+        liquid_env.add_filter('stylesheet_tag', filters.stylesheet_tag)
 
-        return jinja_environment
+        return liquid_env
 
     def get_reset_password_data(self, request):
         reset_data = {
@@ -398,6 +382,27 @@ class ThemeTemplateView(APIView):
                     config[key]['available'] = product_data['available']
                 except Product.DoesNotExist:
                     return None
+
+    def get_default_config(self, s3, theme_name):
+        default_config = {}
+        config_template_path = os.path.join(
+            'themes',
+            'templates',
+            'official',
+            slugify(theme_name),
+            'config',
+            'settings.json'
+        )
+
+        config_file = s3.get_object(Bucket='jkpay', Key=config_template_path)
+        for key in json.loads(config_file['Body'].read()):
+            if isinstance(key, dict):
+                for k in key:
+                    if k == 'settings':
+                        for s in key[k]:
+                            default_config[s['id']] = s['default']
+
+        return default_config
 
     def get(self, request, page=None, item_slug=None):
         try:
@@ -435,20 +440,40 @@ class ThemeTemplateView(APIView):
 
         template_data = {
             'cart': cart,
+            'collections': self.get_collections(shop.ref_id),
             'csrf_token': get_token(request),
             'currency': get_currency_symbol(shop.currency),
+            'form_errors': get_form_errors(),
+            'header_content': self.get_header_content(request.query_params.get('editor')),
+            'page': {
+                'slug': {
+                    0: page,
+                    1: item_slug
+                }
+            },
             'product': self.get_product(shop.ref_id, item_slug, cart),
             'products': self.get_products(shop.ref_id, item_slug),
-            'required_header_content': self.get_header_content(request.query_params.get('editor')),
-            'shop_ref': shop.ref_id,
-            'shop_name': shop.name,
-            'theme_id': theme.ref_id,
-            'user': self.get_customer(request.user, user_cookie),
-            'form_errors': get_form_errors(),
             'reset_data': self.get_reset_password_data(request),
+            'shop': shop_data,
+            'theme': theme,
+            'user': self.get_customer(request.user, user_cookie),
         }
 
+        env = Environment(
+            loader=CustomFileSystemLoader(os.path.join(settings.BASE_DIR, 'themes')),
+            globals=template_data
+        )
+
+        self.get_custom_filters(env)
+        env.add_tag(FragmentTag)
+        env.add_tag(FormTag)
+
         s3 = boto3.client('s3')
+
+        if page == 'products' and item_slug is not None:
+            page = 'product'
+        elif page == 'collections' and item_slug is not None:
+            page = 'collection'
 
         try:
             theme_template_path = os.path.join(
@@ -456,13 +481,24 @@ class ThemeTemplateView(APIView):
                 'templates',
                 'official',
                 slugify(theme.name),
-                ('index' if page is None else page) + '.jinja2',
+                'templates',
+                'base.liquid'
             )
 
-            jinja_file = s3.get_object(Bucket='jkpay', Key=theme_template_path)
-            jinja_file_decoded = jinja_file['Body'].read().decode('utf_8')
-            jinja_environment = self.get_custom_filters()
-            jinja_template = jinja_environment.from_string(jinja_file_decoded)
+            layout_template_path = os.path.join(
+                'themes',
+                'templates',
+                'official',
+                slugify(theme.name),
+                'layouts',
+                ('index' if page is None else page) + '.liquid',
+            )
+
+            liquid_file = s3.get_object(Bucket='jkpay', Key=theme_template_path)
+            liquid_file_decoded = env.from_string(liquid_file['Body'].read().decode('utf_8'))
+
+            layout_liquid_file = s3.get_object(Bucket='jkpay', Key=layout_template_path)
+            layout_liquid_file_decoded = env.from_string(layout_liquid_file['Body'].read().decode('utf_8'))
         except s3.exceptions.NoSuchKey:
             return HttpResponseRedirect(get_url('/404'))
 
@@ -489,14 +525,18 @@ class ThemeTemplateView(APIView):
                 config_file_decoded = json.load(config_file['Body'])
                 self.add_item_details_to_config(config_file_decoded)
 
-                rendered_template = jinja_template.render(template_data | config_file_decoded)
+                page_render = layout_liquid_file_decoded.render(**config_file_decoded)
+                rendered_template = liquid_file_decoded.render(layout_content=page_render)
             except botocore.exceptions.ClientError:
-                rendered_template = jinja_template.render(template_data)
+                default_config = self.get_default_config(s3, theme.name)
+                page_render = layout_liquid_file_decoded.render(**default_config)
+                rendered_template = liquid_file_decoded.render(layout_content=page_render)
         else:
-            rendered_template = jinja_template.render(template_data)
+            default_config = self.get_default_config(s3, theme.name)
+            page_render = layout_liquid_file_decoded.render(**default_config)
+            rendered_template = liquid_file_decoded.render(layout_content=page_render)
 
         reset_form_errors()
-
         response = HttpResponse(rendered_template)
 
         if user_cookie is None:

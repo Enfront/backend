@@ -148,7 +148,10 @@ class CartAddItemView(APIView):
 
         serialized_data.create(serialized_data.data)
 
-        response = HttpResponseRedirect(get_url('/cart', slugify(cart_data.get('shop'))))
+        if request.META.get('HTTP_REFERER') is None:
+            response = HttpResponseRedirect(get_url('/cart', slugify(cart_data.get('shop'))))
+        else:
+            response = HttpResponseRedirect(request.META.get('HTTP_REFERER'))
 
         # create cart cookie since there is not one already
         if new_cart:
@@ -197,4 +200,7 @@ class CartRemoveItemView(APIView):
                 status.HTTP_400_BAD_REQUEST,
             )
 
-        return HttpResponseRedirect(get_url('/cart', slugify(cart_data.get('shop'))))
+        if request.META.get('HTTP_REFERER') is None:
+            return HttpResponseRedirect(get_url('/cart', slugify(cart_data.get('shop'))))
+
+        return HttpResponseRedirect(request.META.get('HTTP_REFERER'))

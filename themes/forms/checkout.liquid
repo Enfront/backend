@@ -1,0 +1,4 @@
+<form method="post" action="/shop/checkout" enctype="multipart/form-data">
+    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}" />
+    <input type="hidden" name="shop" value="{{ shop.ref_id }}" />
+    <input type="hidden" name="form_type" value="customer_checkout">
