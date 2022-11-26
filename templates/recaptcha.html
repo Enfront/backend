@@ -17,7 +17,7 @@
 
         addRecaptchaTokenToForm = () => {
             window.addEventListener("DOMContentLoaded", function() {
-                const t = document.querySelectorAll(['form[action*="/shop/users/register"] input[name="form_type"][value="customer_register"], form[action*="/shop/users/login"] input[name="form_type"][value="customer_login"], form[action*="/shop/users/forgot"] input[name="form_type"][value="customer_forgot"]'].join(", "));
+                const t = document.querySelectorAll(['form[action*="/shop/checkout"] input[name="form_type"][value="customer_checkout"], form[action*="/shop/users/register"] input[name="form_type"][value="customer_register"], form[action*="/shop/users/login"] input[name="form_type"][value="customer_login"], form[action*="/shop/users/forgot"] input[name="form_type"][value="customer_forgot"]'].join(", "));
                 for (var e = 0; e < t.length; e++) {
                     var n = t[e].form,
                         a = t[e].getAttribute("value");

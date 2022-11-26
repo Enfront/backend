@@ -32,6 +32,7 @@ from .models import Order, OrderComment
 from shops.models import Shop
 from carts.views import get_users_cart, get_users_cart_items
 from shared.exceptions import CustomException
+from shared.recaptcha_validation import RecaptchaValidation
 from shared.services import send_mailgun_email, get_url
 from shared.pagination import PaginationMixin, CustomPagination
 from payments.paypal.paypal import PayPalClient
@@ -215,8 +216,9 @@ class OrderView(APIView, PaginationMixin):
 
         serialized_data = self.serializer_class(data=order_data, context=context)
         is_valid = serialized_data.is_valid(raise_exception=False)
+        is_captcha_valid = RecaptchaValidation(order_data['recaptcha'])
 
-        if not is_valid or serialized_data.data['total'] < decimal.Decimal(0.50):
+        if not is_valid or not is_captcha_valid or serialized_data.data['total'] < decimal.Decimal(0.50):
             return HttpResponseRedirect(get_url('/404'))
 
         client_ip = get_client_ip(request)
