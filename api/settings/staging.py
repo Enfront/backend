@@ -15,7 +15,7 @@ SECRET_KEY = os.environ['SECRET_KEY']
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['.enfront.gg']
+ALLOWED_HOSTS = ['.enfront.gg', '167.172.255.101']
 
 CORS_ALLOWED_ORIGINS = [
     'https://enfront.gg',
