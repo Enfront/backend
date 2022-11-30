@@ -14,6 +14,7 @@ from uuid import uuid4
 from liquid import Environment
 from liquid_extra import filters
 from babel.numbers import get_currency_symbol
+from botocore.exceptions import ClientError
 
 import os
 import boto3
@@ -102,24 +103,28 @@ class ThemeConfigurationView(APIView):
 
         try:
             theme_config = ThemeConfiguration.objects.get(
-                shop__owner=request.user, theme__ref_id=theme_ref, shop__ref_id=shop_ref
+                config_status=1, shop__owner=request.user, theme__ref_id=theme_ref, shop__ref_id=shop_ref
             )
 
-            if theme_config.config_status == 1:
-                save_path = os.path.join('themes', 'configurations', theme_config.file_name)
+            save_path = os.path.join('themes', 'configurations', theme_config.file_name)
 
-                s3 = boto3.client('s3')
-                config = s3.get_object(Bucket='jkpay', Key=save_path)
-                contents = config['Body'].read().decode()
-                json_content = json.loads(contents)
-            else:
-                json_content = None
+            s3 = boto3.client('s3')
+            config = s3.get_object(Bucket='jkpay', Key=save_path)
+            contents = config['Body'].read().decode()
+
+            json_content = json.loads(contents)
+
         except ThemeConfiguration.DoesNotExist:
-            # TODO: Maybe replace with creation of config file
-            raise CustomException(
-                'A theme configuration was not found for shop ' + str(shop_ref) + '.',
-                status.HTTP_204_NO_CONTENT
-            )
+            json_content = None
+
+        except ClientError as error:
+            if error.response['Error']['Code'] == 'NoSuchKey':
+                json_content = None
+            else:
+                raise CustomException(
+                    'An error occurred while retrieving the theme configuration.',
+                    status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
 
         data = {
             'success': True,
