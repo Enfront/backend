@@ -554,15 +554,16 @@ class CheckAuthStatusView(APIView):
 
     def get(self, request):
         if not request.user.is_authenticated:
-            raise CustomException(
-                'A session does not exist.',
-                status.HTTP_401_UNAUTHORIZED
-            )
-
-        data = {
-            'success': True,
-            'message': 'There is an active session.',
-            'data': {}
-        }
+            data = {
+                'success': False,
+                'message': 'User is not authenticated.',
+                'data': {}
+            }
+        else:
+            data = {
+                'success': True,
+                'message': 'There is an active session.',
+                'data': {}
+            }
 
         return Response(data, status=status.HTTP_200_OK)
