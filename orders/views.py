@@ -192,7 +192,7 @@ class OrderView(APIView, PaginationMixin):
 
         user_cookie = request.COOKIES.get('_enfront_uid')
         cart_cookie = request.COOKIES.get('_enfront_cid')
-        reacptcha_token = request.data.get('reacptcha_token')
+        reacptcha_token = request.data.get('recaptcha')
         cart = get_users_cart(cart_cookie)
 
         if cart is None or reacptcha_token is None:
