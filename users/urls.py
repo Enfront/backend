@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 
 from users.views import (
     UserView,
@@ -7,13 +7,22 @@ from users.views import (
     ResetPasswordView,
     ActivateUserView,
     LoginUserView,
+    LoginTwoUserView,
     LogoutUserView,
     GetCsrfTokenView,
     CheckAuthStatusView,
+    TwoFactorValidateView,
+    TwoFactorDisableView,
 )
 
 app_name = 'users'
 urlpatterns = [
+    # Trench
+    path('users/', include('trench.urls')),
+    path('users/login/two-factor', LoginTwoUserView.as_view()),
+    path('users/two-factor/validate', TwoFactorValidateView.as_view()),
+    path('users/two-factor/disable', TwoFactorDisableView.as_view()),
+
     # Users
     path('users', UserView.as_view()),
     path('users/self', UserView.as_view()),

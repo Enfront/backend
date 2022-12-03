@@ -13,6 +13,15 @@ from rest_framework import status
 
 import os
 
+from urllib.request import Request
+from trench.backends.provider import get_mfa_handler
+from trench.command.authenticate_second_factor import authenticate_second_step_command
+from trench.command.deactivate_mfa_method import deactivate_mfa_method_command
+from trench.exceptions import MFAMethodDoesNotExistError, MFAValidationError
+from trench.responses import ErrorResponse
+from trench.serializers import MFAMethodDeactivationValidator
+from trench.utils import get_mfa_model, user_token_generator
+
 from .models import User
 from .serializers import RegisterUserSerializer, PublicUserInfoSerializer, UserSerializer, ResetPasswordSerializer
 from .tokens import account_activation_token, forgot_password_token
@@ -452,7 +461,9 @@ class LoginUserView(APIView):
                 status.HTTP_422_UNPROCESSABLE_ENTITY
             )
 
-        is_captcha_valid = RecaptchaValidation(auth_data['recaptcha'])
+        # TODO
+        # is_captcha_valid = RecaptchaValidation(auth_data['recaptcha'])
+        is_captcha_valid = True
         if not is_captcha_valid:
             if not is_dashboard:
                 create_form_errors(
@@ -489,13 +500,59 @@ class LoginUserView(APIView):
                 status.HTTP_401_UNAUTHORIZED
             )
 
-        login(request, user)
-
         if not is_dashboard:
+            login(request, user)
+
             response = HttpResponseRedirect(get_url('/', auth_data['shop_name']))
             response.set_cookie('_enfront_uid', user.ref_id, 604800)
-
             return response
+
+        try:
+            mfa_model = get_mfa_model()
+            mfa_method_active = mfa_model.objects.is_active_by_name(user_id=user.id, name='app')
+
+            if not mfa_method_active:
+                raise MFAMethodDoesNotExistError()
+
+            mfa_method = mfa_model.objects.get_by_name(user_id=user.id, name='app')
+            get_mfa_handler(mfa_method=mfa_method).dispatch_message()
+
+            data = {
+                'success': True,
+                'message': 'The first login step has been completed.',
+                'data': {
+                    'user': str(user.ref_id),
+                    'ephemeral_token': user_token_generator.make_token(user),
+                    'method': mfa_method.name,
+                }
+            }
+
+            response = Response(data, status=status.HTTP_202_ACCEPTED)
+        except MFAMethodDoesNotExistError:
+            login(request, user)
+
+            data = {
+                'success': True,
+                'message': 'Login successful.',
+                'data': {}
+            }
+
+            response = Response(data, status=status.HTTP_200_OK)
+
+        return response
+
+
+class LoginTwoUserView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        user = authenticate_second_step_command(
+            code=request.data['code'],
+            ephemeral_token=request.data['ephemeral_token'],
+        )
+
+        login(request, user)
 
         data = {
             'success': True,
@@ -567,3 +624,41 @@ class CheckAuthStatusView(APIView):
             }
 
         return Response(data, status=status.HTTP_200_OK)
+
+
+class TwoFactorValidateView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        ephemeral_token = user_token_generator.make_token(request.user)
+        authenticate_second_step_command(code=request.data['code'], ephemeral_token=ephemeral_token)
+
+        data = {
+            'success': True,
+            'message': 'The two-factor code was validated.',
+            'data': {},
+        }
+
+        response = Response(data, status=status.HTTP_200_OK)
+        return response
+
+
+class TwoFactorDisableView(APIView):
+    permission_classes = [AllowAny]
+
+    @staticmethod
+    def post(request: Request) -> Response:
+        method = request.data.get('method')
+        user = User.objects.get(ref_id=request.data.get('user'))
+
+        serializer = MFAMethodDeactivationValidator(mfa_method_name=method, user=user, data=request.data)
+        if not serializer.is_valid():
+            return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
+
+        try:
+            deactivate_mfa_method_command(mfa_method_name=method, user_id=user.id)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except MFAValidationError as cause:
+            return ErrorResponse(error=cause)
+

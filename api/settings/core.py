@@ -9,10 +9,10 @@ https://docs.djangoproject.com/en/3.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.2/ref/settings/
 """
-
 from pathlib import Path
 
 import os
+import string
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -81,6 +81,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'django_hosts',
+    'trench',
 ]
 
 MIDDLEWARE = [
@@ -160,7 +161,7 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication'
+        'rest_framework.authentication.SessionAuthentication',
     ],
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
@@ -196,3 +197,34 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # https://pypi.org/project/django-recaptcha/
 
 RECAPTCHA_DOMAIN = 'www.recaptcha.net'
+
+# Trench MFA
+# https://django-trench.readthedocs.io/en/latest/installation.html
+
+TRENCH_AUTH = {
+    "USER_MFA_MODEL": "trench.MFAMethod",
+    "USER_ACTIVE_FIELD": "is_active",
+    "BACKUP_CODES_QUANTITY": 1,
+    "BACKUP_CODES_LENGTH": 12,
+    "BACKUP_CODES_CHARACTERS": (string.ascii_letters + string.digits),
+    "SECRET_KEY_LENGTH": 32,
+    "DEFAULT_VALIDITY_PERIOD": 30,
+    "CONFIRM_DISABLE_WITH_CODE": True,
+    "CONFIRM_BACKUP_CODES_REGENERATION_WITH_CODE": True,
+    "ALLOW_BACKUP_CODES_REGENERATION": True,
+    "ENCRYPT_BACKUP_CODES": True,
+    "APPLICATION_ISSUER_NAME": "Enfront",
+    "MFA_METHODS": {
+        "email": {
+            "VERBOSE_NAME": "email",
+            "VALIDITY_PERIOD": 60 * 10,
+            "HANDLER": "shared.email.SendMailMessageDispatcher",
+        },
+        "app": {
+            "VERBOSE_NAME": "app",
+            "VALIDITY_PERIOD": 30,
+            "USES_THIRD_PARTY_CLIENT": True,
+            "HANDLER": "trench.backends.application.ApplicationMessageDispatcher",
+        }
+    }
+}
