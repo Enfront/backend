@@ -92,7 +92,7 @@ class OrderView(APIView, PaginationMixin):
 
             email_subject = order.shop.name + ' Order Created'
             email_body = render_to_string(
-                os.path.join(settings.BASE_DIR, 'templates', 'emails', 'new_order.jinja2'),
+                os.path.join(settings.BASE_DIR, 'templates', 'emails', 'new_order.liquid'),
                 context
             )
 

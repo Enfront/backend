@@ -90,7 +90,7 @@ class RegisterUserView(APIView):
 
         email_subject = 'Activate Your Account'
         email_body = render_to_string(
-            os.path.join(settings.BASE_DIR, 'templates', 'emails', 'account_activation.jinja2'),
+            os.path.join(settings.BASE_DIR, 'templates', 'emails', 'account_activation.liquid'),
             context
         )
 
@@ -170,7 +170,7 @@ class ForgotPasswordView(APIView):
 
         email_subject = 'Reset Your Password'
         email_body = render_to_string(
-            os.path.join(settings.BASE_DIR, 'templates', 'emails', 'reset_password.jinja2'),
+            os.path.join(settings.BASE_DIR, 'templates', 'emails', 'reset_password.liquid'),
             context
         )
 

@@ -186,7 +186,7 @@ def send_virtual_product_email(email_address, order):
 
     email_subject = order.shop.name + ' Order Complete'
     email_body = render_to_string(
-        os.path.join(settings.BASE_DIR, 'templates', 'emails', 'order_complete.jinja2'),
+        os.path.join(settings.BASE_DIR, 'templates', 'emails', 'order_complete.liquid'),
         context
     )
 

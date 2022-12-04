@@ -18,7 +18,7 @@ class SendMailMessageDispatcher(AbstractMessageDispatcher):
         try:
             email_subject = 'Your one-time verification code is ' + context.get('code')
             email_body = render_to_string(
-                os.path.join(settings.BASE_DIR, 'templates', 'emails', 'two_factor_code.jinja2'),
+                os.path.join(settings.BASE_DIR, 'templates', 'emails', 'two_factor_code.liquid'),
                 context
             )
 
