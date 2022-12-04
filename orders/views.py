@@ -100,7 +100,7 @@ class OrderView(APIView, PaginationMixin):
 
     def check_seach_query(self, requester, shop_ref, query):
         order = (
-            Order.objects.filter(shop__owner=requester.user, shop_id__ref_id=shop_ref, email__contains=query)
+            Order.objects.filter(shop__owner=requester, shop_id__ref_id=shop_ref, email__contains=query)
             .order_by('-created_at')
         )
 
