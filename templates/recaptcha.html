@@ -6,22 +6,32 @@
             this.addRecaptchaTokenToForm();
         }
 
-        getToken = (t, e) => {
-            grecaptcha.execute('6LfyKAEeAAAAALsY50FzMgCWwmu27rg3B4yl-Vet', {
+        getToken = async (t, e) => {
+            await grecaptcha.execute('6LfyKAEeAAAAALsY50FzMgCWwmu27rg3B4yl-Vet', {
                 action: e
             }).then((function(e) {
-                var n = t.querySelector("input[name=recaptcha]");
-                n instanceof HTMLElement ? n.setAttribute("value", e) : ((n = document.createElement("input")).setAttribute("name", "recaptcha"), n.setAttribute("type", "hidden"), n.setAttribute("value", e), t.appendChild(n, t)), t.submit()
+                let n = t.querySelector("input[name=recaptcha]");
+                if (n instanceof HTMLElement) {
+                  n.setAttribute("value", e);
+                } else {
+                   const o = document.createElement("input");
+                   o.setAttribute("name", "recaptcha");
+                   o.setAttribute("type", "hidden");
+                   o.setAttribute("value", e);
+                   t.appendChild(o, t);
+                }
+
+                t.submit()
             }))
         }
 
         addRecaptchaTokenToForm = () => {
             window.addEventListener("DOMContentLoaded", function() {
                 const t = document.querySelectorAll(['form[action*="/shop/checkout"] input[name="form_type"][value="customer_checkout"], form[action*="/shop/users/register"] input[name="form_type"][value="customer_register"], form[action*="/shop/users/login"] input[name="form_type"][value="customer_login"], form[action*="/shop/users/forgot"] input[name="form_type"][value="customer_forgot"]'].join(", "));
-                for (var e = 0; e < t.length; e++) {
-                    var n = t[e].form,
-                        a = t[e].getAttribute("value");
-                    n.setAttribute("onsubmit", 'enfront.getToken(this, "' + a + '"); return false;')
+                for (let e = 0; e < t.length; e++) {
+                    const n = t[e].form;
+                    const a = t[e].getAttribute("value");
+                    n.setAttribute("onsubmit", 'enfront.getToken(this, "' + a + '"); return false;');
                 }
             });
         }
