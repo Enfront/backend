@@ -427,7 +427,10 @@ class LoginUserView(APIView):
         auth_data = request.data
         is_dashboard = auth_data.get('shop', False)
 
-        if not is_dashboard and auth_data.get('shop_name') is None:
+        if auth_data.get('shop_name') is None:
+            if not is_dashboard:
+                return HttpResponseRedirect(get_url('/404'))
+
             raise CustomException(
                 'A shop name must be provided.',
                 status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -460,10 +463,22 @@ class LoginUserView(APIView):
                 'A password must be provided.',
                 status.HTTP_422_UNPROCESSABLE_ENTITY
             )
+        elif auth_data.get('recaptcha') is None:
+            if not is_dashboard:
+                create_form_errors(
+                    'form',
+                    'The request is not valid.',
+                    status.HTTP_422_UNPROCESSABLE_ENTITY
+                )
 
-        # TODO
-        # is_captcha_valid = RecaptchaValidation(auth_data['recaptcha'])
-        is_captcha_valid = True
+                return HttpResponseRedirect(get_url('/login', auth_data['shop_name']))
+
+            raise CustomException(
+                'A recaptcha token must be provided.',
+                status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+
+        is_captcha_valid = RecaptchaValidation(auth_data['recaptcha'])
         if not is_captcha_valid:
             if not is_dashboard:
                 create_form_errors(
