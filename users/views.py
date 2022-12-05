@@ -12,12 +12,14 @@ from rest_framework.response import Response
 from rest_framework import status
 
 import os
+import pyotp
 
 from urllib.request import Request
 from trench.backends.provider import get_mfa_handler
 from trench.command.authenticate_second_factor import authenticate_second_step_command
 from trench.command.deactivate_mfa_method import deactivate_mfa_method_command
 from trench.exceptions import MFAMethodDoesNotExistError, MFAValidationError
+from trench.models import MFAMethod
 from trench.responses import ErrorResponse
 from trench.serializers import MFAMethodDeactivationValidator
 from trench.utils import get_mfa_model, user_token_generator
@@ -96,6 +98,15 @@ class RegisterUserView(APIView):
 
         send_mailgun_email(user.email, email_subject, email_body, 'auth')
 
+    def create_email_two_factor(self, user):
+        MFAMethod.objects.create(
+            name='email',
+            user=user,
+            is_primary=True,
+            is_active=True,
+            secret=pyotp.random_base32(length=settings.TRENCH_AUTH['SECRET_KEY_LENGTH']),
+        )
+
     def post(self, request):
         register_data = request.data
         is_dashboard = register_data.get('shop', False)
@@ -131,6 +142,9 @@ class RegisterUserView(APIView):
         created_user = serialized_data.create(serialized_data.validated_data, register_data.get('shop_name'))
         if created_user is None:
             return HttpResponseRedirect(get_url('/register', register_data['shop_name']))
+
+        if is_dashboard:
+            self.create_email_two_factor(created_user)
 
         self.send_activation_email(created_user, register_data.get('shop_name'))
 

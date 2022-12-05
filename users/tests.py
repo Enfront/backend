@@ -6,6 +6,7 @@ from countries.models import Country
 from customers.models import Customer
 from shared.services import form_errors, get_url, reset_form_errors
 from shops.models import Shop
+from trench.models import MFAMethod
 from users.models import User
 from users.tokens import account_activation_token, forgot_password_token
 
@@ -118,6 +119,9 @@ class TestRegisterView(UserData):
 
         user_count = User.objects.count()
         self.assertEqual(user_count, 1)
+
+        mfa_method_count = MFAMethod.objects.count()
+        self.assertEqual(mfa_method_count, 1)
 
     def test_customer_registration_passing(self):
         shop = self.create_shop()
