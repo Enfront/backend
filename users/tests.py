@@ -21,12 +21,14 @@ class UserData(APITestCase):
             'last_name': 'Snow',
             'password': 'ghost!123',
             'password_confirmation': 'ghost!123',
+            'recaptcha': 'test',
             'shop': True,
         }
 
         cls.login_data = {
             'email': 'snow@castleblack.com',
             'password': 'ghost!123',
+            'recaptcha': 'test',
             'shop': True
         }
 
@@ -372,7 +374,8 @@ class TestForgotPasswordView(UserData):
         shop = self.create_shop()
         forgot_password_data = {
             'email': 'test@mail.com',
-            'shop_name': 'The Wall'
+            'shop_name': 'The Wall',
+            'recaptcha': 'test'
         }
 
         response = self.client.post('/api/v1/users/forgot', forgot_password_data, secure=True)
@@ -808,7 +811,7 @@ class TestLoginView(UserData):
         self.login_data['shop'] = False
         response = self.client.post('/api/v1/users/login', self.login_data, secure=True)
 
-        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(response.url, get_url('/404'))
         self.assertFalse(SESSION_KEY in self.client.session)
 
     def test_post_login_no_email(self):
@@ -982,4 +985,5 @@ class TestOtherUserViews(UserData):
 
     def test_get_auth_session_not_logged_in(self):
         response = self.client.get('/api/v1/users/status', secure=True)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['success'], False)
