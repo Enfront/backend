@@ -1,5 +1,5 @@
 # pull official base image
-FROM python:3.10.5-slim-buster as dev
+FROM python:3.10-slim-buster as dev
 
 # set working directory
 WORKDIR /usr/src/app
@@ -32,7 +32,7 @@ ENTRYPOINT ["bash", "docker-entrypoint.sh"]
 CMD ["python3", "manage.py", "runserver", "0.0.0.0:8000", "--settings" , "api.settings.dev"]
 
 # pull official base image
-FROM python:3.10.5-slim-buster as staging
+FROM python:3.10-slim-buster as staging
 
 # set working directory
 WORKDIR /usr/src/app
@@ -65,7 +65,7 @@ ENTRYPOINT ["bash", "docker-entrypoint.sh"]
 CMD ["python3", "manage.py", "runserver", "0.0.0.0:8000", "--settings" , "api.settings.staging"]
 
 # pull official base image
-FROM python:3.10.5-slim-buster as prod
+FROM python:3.10-slim-buster as prod
 
 # set working directory
 WORKDIR /usr/src/app
