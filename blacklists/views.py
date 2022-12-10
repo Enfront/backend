@@ -20,7 +20,7 @@ class BlacklistView(APIView, PaginationMixin):
                 status.HTTP_422_UNPROCESSABLE_ENTITY
             )
 
-        blacklist = Blacklist.objects.filter(shop__owner=request.user, shop_id__ref_id=shop_ref)
+        blacklist = Blacklist.objects.filter(shop__owner=request.user, shop_id__ref_id=shop_ref).order_by('-created_at')
         if not blacklist.exists():
             data = {
                 'success': True,
@@ -68,15 +68,9 @@ class BlacklistView(APIView, PaginationMixin):
             }
         }
 
-        return Response(data, status=status.HTTP_200_OK)
+        return Response(data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, ref_id):
-        if ref_id is None:
-            raise CustomException(
-                'A blacklist ref must be provided.',
-                status.HTTP_422_UNPROCESSABLE_ENTITY
-            )
-
         try:
             blacklist = Blacklist.objects.get(shop__owner=request.user, ref_id=ref_id)
             blacklist.delete()
